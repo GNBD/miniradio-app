@@ -1,4 +1,4 @@
-# miniradio companion
+# MINI Control
 
 Android (and Windows) companion app for the GNBD ATS Mini / miniradio receiver.
 
@@ -6,10 +6,20 @@ Controls the radio over Bluetooth LE using the Nordic UART Service (NUS) and can
 act as a network bridge: when the radio has no Wi-Fi, the phone fetches
 weather / EiBi schedule / time and forwards the result over BLE.
 
+## Screenshots
+
+| Remote | Presets | Settings |
+|---|---|---|
+| ![Remote](docs/screenshots/remote.png) | ![Presets](docs/screenshots/presets.png) | ![Settings](docs/screenshots/settings.png) |
+
+| Live values (battery / voltage) |
+|---|
+| ![Live values](docs/screenshots/settings-live.png) |
+
 ## Features
 
 - BLE remote: tune, band, mode, volume, presets, radio settings
-- Live status: frequency, band, mode, volume, RSSI, SNR, battery, RDS/EiBi text
+- Live status: frequency, band, mode, volume, RSSI, SNR, battery, voltage, RDS/EiBi text
 - Presets: loaded from and saved to the radio
 - Radio tab: step / bandwidth / AGC / squelch / FM options
 - Network bridge: weather, EiBi download and clock sync without radio Wi-Fi
@@ -27,8 +37,13 @@ weather / EiBi schedule / time and forwards the result over BLE.
 
 ```bash
 flutter pub get
-flutter build apk --release --split-per-abi
+flutter build apk --release --split-per-abi      # per-ABI APKs
+flutter build apk --release \
+  --target-platform android-arm,android-arm64    # universal ARM APK
 ```
+
+Prebuilt APKs are in `release/`:
+`miniradio-0.1.0-beta-arm64.apk`, `-armv7.apk`, `-arm-universal.apk`.
 
 Release signing uses `android/key.properties` (not committed). Copy
 `android/key.properties.example` and point it at your own keystore.
