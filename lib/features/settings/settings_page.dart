@@ -184,6 +184,32 @@ class SettingsPage extends StatelessWidget {
             children: [
               const CardHead(title: 'About', overline: 'COMPANION'),
               const SizedBox(height: 12),
+              Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(11),
+                    child: Image.asset(
+                      'assets/branding/miniradio-logo-512.png',
+                      width: 44,
+                      height: 44,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Mini Control',
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: p.ink)),
+                      Text('by GNBD',
+                          style: TextStyle(fontSize: 11, color: p.muted)),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
               _row(p, 'Version', '0.1.0 beta'),
               const Divider(height: 20),
               _row(p, 'Protocol',
