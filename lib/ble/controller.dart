@@ -210,11 +210,10 @@ class BleController extends ChangeNotifier {
         await send(Cmd.presetList);
         await send(Cmd.getSettings);
         await setBridgeEnabled(bridgeEnabled);
+        await pushTime();
       } else if (isAts) {
         await loadPresets();
         _startWatchdog();
-      } else if (isGnbd) {
-        await pushTime();
       }
     } catch (e) {
       error = '$e';
