@@ -24,13 +24,6 @@ class RemotePage extends StatelessWidget {
 
   static const int _stepHz = 100000;
 
-  static const _quickBands = [
-    (0, 'FM'),
-    (2, 'LW'),
-    (1, 'MW'),
-    (3, 'SW'),
-  ];
-
   @override
   Widget build(BuildContext context) {
     final p = Pal(context);
@@ -152,7 +145,6 @@ class RemotePage extends StatelessWidget {
 
   // ----------------------------------------------------------- receiver
   Widget _receiverCard(BuildContext context, RadioStatus? st, bool connected) {
-    final band = st?.band ?? 0;
     final freq = st?.freqLabel ?? '---.---';
     final unit = st?.unitLabel ?? 'MHz';
     final mode = st?.modeName ?? 'FM';
@@ -192,7 +184,7 @@ class RemotePage extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          '$mode · ${band == 0 ? 'STEREO' : 'RECEIVE'}',
+                          '$mode · ${(st?.mode ?? 0) == 0 ? 'STEREO' : 'RECEIVE'}',
                           style: const TextStyle(
                             color: Color(0xFFB8C9E4),
                             fontSize: 10,
@@ -260,7 +252,7 @@ class RemotePage extends StatelessWidget {
                     if (ble.isAts)
                       _atsBandRow(context, st?.bandName ?? '-', connected)
                     else
-                      _bandRow(context, band, connected),
+                      _bandSelectorRow(context, st?.bandName ?? '-', connected),
                     const SizedBox(height: 12),
                     _tuningRow(context, connected, useMhz),
                   ],
@@ -377,61 +369,100 @@ class RemotePage extends StatelessWidget {
     );
   }
 
-  Widget _bandRow(BuildContext context, int band, bool connected) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF2F4F8),
-        borderRadius: BorderRadius.circular(13),
-      ),
-      child: Row(
-        children: _quickBands.map((e) {
-          final n = (ble.status?.bandName ?? '').toUpperCase();
-          final active = ble.isAts
-              ? (e.$1 == 0
-                  ? n == 'VHF'
-                  : e.$1 == 2
-                      ? n == 'MW1'
-                      : e.$1 == 1
-                          ? n.startsWith('MW') && n != 'MW1'
-                          : !(n == 'VHF' || n.startsWith('MW')))
-              : band == e.$1;
-          return Expanded(
-            child: GestureDetector(
-              onTap: connected ? () => ble.setBand(e.$1) : null,
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: active ? Colors.white : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: active
-                      ? [
-                          BoxShadow(
-                            color: const Color(0xFF1B3150)
-                                .withValues(alpha: 0.08),
-                            blurRadius: 7,
-                            offset: const Offset(0, 2),
-                          )
-                        ]
-                      : null,
-                ),
-                child: Text(
-                  e.$2,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 11,
+  /// GNBD: tap to open the full band list and pick one.
+  Widget _bandSelectorRow(
+      BuildContext context, String bandName, bool connected) {
+    final p = Pal(context);
+    return GestureDetector(
+      onTap: connected ? () => _showBandSheet(context) : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        decoration: BoxDecoration(
+          color: p.soft,
+          borderRadius: BorderRadius.circular(13),
+        ),
+        child: Row(
+          children: [
+            Text('BAND',
+                style: TextStyle(
+                    fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: active
-                        ? const Color(0xFF2878F0)
-                        : const Color(0xFF7C8493),
-                  ),
-                ),
-              ),
+                    letterSpacing: 1,
+                    color: p.muted)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(bandName,
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: p.blue)),
             ),
-          );
-        }).toList(),
+            Icon(Icons.expand_more, size: 20, color: p.muted),
+          ],
+        ),
       ),
     );
+  }
+
+  Future<void> _showBandSheet(BuildContext context) async {
+    final picked = await showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (c) {
+        final p = Pal(c);
+        return Container(
+          constraints: const BoxConstraints(maxHeight: 520),
+          padding: const EdgeInsets.fromLTRB(12, 14, 12, 18),
+          decoration: BoxDecoration(
+            color: p.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                    color: p.line, borderRadius: BorderRadius.circular(2)),
+              ),
+              Text('Select band',
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: p.ink)),
+              const SizedBox(height: 8),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: RadioStatus.bandNames.length,
+                  itemBuilder: (c2, i) {
+                    final selected = ble.status?.band == i;
+                    return ListTile(
+                      dense: true,
+                      onTap: () => Navigator.pop(c2, i),
+                      title: Text(RadioStatus.bandNames[i],
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: selected
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: selected ? p.blue : p.ink)),
+                      trailing: selected
+                          ? Icon(Icons.check, size: 18, color: p.blue)
+                          : null,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (picked != null) await ble.setBand(picked);
   }
 
   Widget _tuningRow(BuildContext context, bool connected, bool useMhz) {
