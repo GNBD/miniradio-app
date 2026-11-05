@@ -75,7 +75,7 @@ class BleController extends ChangeNotifier {
     if (log.length > 40) log.removeLast();
   }
 
-  Future<void> startScan() async {
+  Future<void> startScan({bool all = false}) async {
     error = null;
     found.clear();
     _set(LinkState.scanning);
@@ -83,7 +83,9 @@ class BleController extends ChangeNotifier {
       await UniversalBle.requestPermissions();
       UniversalBle.onScanResult = _onScan;
       await UniversalBle.startScan(
-        scanFilter: ScanFilter(withNamePrefix: [Nus.deviceName]),
+        scanFilter: all
+            ? null
+            : ScanFilter(withNamePrefix: const ['miniradio', 'ATS']),
         skipDuplicates: true,
       );
       _log('scan started');

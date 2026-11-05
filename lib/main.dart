@@ -316,7 +316,7 @@ class _ConnectionSheetState extends State<_ConnectionSheet> {
           Text(
             connected
                 ? '${ble.deviceName ?? 'miniradio'} · ${ble.deviceId ?? ''}'
-                : 'Find and connect to miniradio.',
+                : 'Searching for miniradio / ATS-Mini…',
             style: TextStyle(fontSize: 11, color: p.muted),
           ),
           const SizedBox(height: 14),
@@ -326,6 +326,16 @@ class _ConnectionSheetState extends State<_ConnectionSheet> {
               child: Text('No devices found.',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 12, color: p.muted)),
+            ),
+          if (!connected)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: GestureDetector(
+                onTap: () => ble.startScan(all: true),
+                child: Text('Show all Bluetooth devices',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11, color: p.blue)),
+              ),
             ),
           ...ble.found.entries.map(
             (e) => GestureDetector(
