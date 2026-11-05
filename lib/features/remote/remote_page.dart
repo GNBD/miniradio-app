@@ -257,7 +257,10 @@ class RemotePage extends StatelessWidget {
                     const SizedBox(height: 18),
                     _signalRow(st),
                     const SizedBox(height: 16),
-                    _bandRow(context, band, connected),
+                    if (ble.isAts)
+                      _atsBandRow(context, st?.bandName ?? '-', connected)
+                    else
+                      _bandRow(context, band, connected),
                     const SizedBox(height: 12),
                     _tuningRow(context, connected, useMhz),
                   ],
@@ -335,6 +338,41 @@ class RemotePage extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Official ATS Mini: step through bands with the arrows instead of
+  /// jumping straight to a band (the receiver only supports next/previous).
+  Widget _atsBandRow(BuildContext context, String bandName, bool connected) {
+    final p = Pal(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      decoration: BoxDecoration(
+        color: p.soft,
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: connected ? () => ble.bandStep(-1) : null,
+            child: Icon(Icons.chevron_left,
+                size: 24, color: connected ? p.blue : p.muted),
+          ),
+          Expanded(
+            child: Text(bandName,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: p.blue)),
+          ),
+          GestureDetector(
+            onTap: connected ? () => ble.bandStep(1) : null,
+            child: Icon(Icons.chevron_right,
+                size: 24, color: connected ? p.blue : p.muted),
+          ),
+        ],
       ),
     );
   }
