@@ -55,15 +55,17 @@ class RemotePage extends StatelessWidget {
         child: DropdownButton<T>(
           isExpanded: true,
           isDense: true,
+          iconSize: 16,
           value: valid,
           hint: Text('-', style: TextStyle(fontSize: 12, color: p.muted)),
           dropdownColor: p.surface,
-          style: TextStyle(fontSize: 12, color: p.ink),
+          style: TextStyle(fontSize: 11.5, color: p.ink),
           items: items
               .map((e) => DropdownMenuItem(
                   value: e.$1,
                   child: Text(e.$2,
-                      style: TextStyle(fontSize: 12, color: p.ink))))
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11.5, color: p.ink))))
               .toList(),
           onChanged: onChanged == null
               ? null
@@ -85,7 +87,7 @@ class RemotePage extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    flex: 3,
+                    flex: 4,
                     child: FieldBox(
                       label: 'Mode',
                       child: dd<int>(
