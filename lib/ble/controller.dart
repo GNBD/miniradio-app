@@ -65,9 +65,6 @@ class BleController extends ChangeNotifier {
   String? savedDeviceId;
   String? _autoTarget;
 
-  /// Manual protocol override: 'auto' | 'gnbd' | 'ats'.
-  String protocolPref = 'auto';
-
   /// Write mode negotiated during detection (ATS uses write-without-response).
   bool _writeWithoutResponse = false;
 
@@ -126,7 +123,6 @@ class BleController extends ChangeNotifier {
   Future<void> loadSavedDevice() async {
     final p = await SharedPreferences.getInstance();
     savedDeviceId = p.getString('ble_device');
-    protocolPref = p.getString('radio_protocol') ?? 'auto';
   }
 
   Future<void> _saveDevice(String id) async {
@@ -217,18 +213,6 @@ class BleController extends ChangeNotifier {
     _statusSeen = false;
     status = null;
 
-    if (protocolPref == 'gnbd') {
-      protocol = RadioProtocol.gnbd;
-      _writeWithoutResponse = false;
-      return;
-    }
-    if (protocolPref == 'ats') {
-      protocol = RadioProtocol.ats;
-      _writeWithoutResponse = true;
-      await sendRaw(AtsCmd.monitorToggle, 'monitor');
-      return;
-    }
-
     for (int attempt = 0; attempt < 3 && !_statusSeen; attempt++) {
       if (attempt == 0) {
         // The official firmware exposes RX as write-without-response only,
@@ -253,22 +237,6 @@ class BleController extends ChangeNotifier {
       protocol = RadioProtocol.gnbd;
     }
     debugPrint('BLE protocol: $protocol');
-    notifyListeners();
-  }
-
-  Future<void> setProtocolPref(String value) async {
-    protocolPref = value;
-    final p = await SharedPreferences.getInstance();
-    await p.setString('radio_protocol', value);
-    if (state == LinkState.connected) {
-      await _detectProtocol();
-      if (isGnbd) {
-        await send(Cmd.query);
-        await send(Cmd.presetList);
-        await send(Cmd.getSettings);
-        await setBridgeEnabled(bridgeEnabled);
-      }
-    }
     notifyListeners();
   }
 
