@@ -135,8 +135,7 @@ class BleController extends ChangeNotifier {
     final name = (d.name?.isNotEmpty == true) ? d.name! : '(no name)';
     found[d.deviceId] = name;
     if (_autoTarget != null &&
-        UniversalBle.canonicalDeviceId(d.deviceId) ==
-            UniversalBle.canonicalDeviceId(_autoTarget!)) {
+        _normId(d.deviceId) == _normId(_autoTarget!)) {
       _autoTarget = null;
       unawaited(connect(d.deviceId));
     }
@@ -146,7 +145,8 @@ class BleController extends ChangeNotifier {
   /// Register / recall the device for automatic reconnection.
   Future<void> loadSavedDevice() async {
     final p = await SharedPreferences.getInstance();
-    savedDeviceId = p.getString('ble_device');
+    final saved = p.getString('ble_device');
+    savedDeviceId = (saved == null || saved.isEmpty) ? null : _normId(saved);
     savedDeviceName = p.getString('ble_device_name');
     unitMode = p.getInt('freq_unit') ?? 0;
   }
@@ -159,7 +159,7 @@ class BleController extends ChangeNotifier {
   }
 
   Future<void> _saveDevice(String id, String? name) async {
-    savedDeviceId = UniversalBle.canonicalDeviceId(id);
+    savedDeviceId = _normId(id);
     if (name != null && name.isNotEmpty) savedDeviceName = name;
     final p = await SharedPreferences.getInstance();
     await p.setString('ble_device', id);
@@ -172,7 +172,7 @@ class BleController extends ChangeNotifier {
   Future<void> autoConnect() async {
     await loadSavedDevice();
     if (savedDeviceId == null || savedDeviceId!.isEmpty) return;
-    _autoTarget = UniversalBle.canonicalDeviceId(savedDeviceId!);
+    _autoTarget = _normId(savedDeviceId!);
     await startScan();
     // Give up after 15 s and fall back to manual scanning.
     Timer(const Duration(seconds: 15), () {
@@ -183,8 +183,11 @@ class BleController extends ChangeNotifier {
     });
   }
 
+  String _normId(String id) =>
+      kIsWeb ? UniversalBle.canonicalDeviceId(id) : id.toLowerCase();
+
   Future<void> connect(String rawId) async {
-    final id = UniversalBle.canonicalDeviceId(rawId);
+    final id = _normId(rawId);
     error = null;
     deviceId = id;
     deviceName = found[id] ?? savedDeviceName;
