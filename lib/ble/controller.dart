@@ -391,6 +391,24 @@ class BleController extends ChangeNotifier {
     await sendRaw(dir > 0 ? AtsCmd.screenUp : AtsCmd.screenDown, 'light');
   }
 
+  // ---- encoder emulation ----
+
+  Future<void> encoderRotate(int dir) async {
+    if (isAts) {
+      await sendRaw(dir > 0 ? AtsCmd.encUp : AtsCmd.encDown, 'enc');
+    } else {
+      await sendRaw(dir > 0 ? 'Y' : 'y', 'enc');
+    }
+  }
+
+  Future<void> encoderClick() async {
+    await sendRaw(isAts ? AtsCmd.click : 'j', 'click');
+  }
+
+  Future<void> encoderHold() async {
+    await sendRaw(isAts ? AtsCmd.shortPress : 'J', 'hold');
+  }
+
   Future<void> toggleMonitor() async {
     await sendRaw(AtsCmd.monitorToggle, 'monitor');
   }

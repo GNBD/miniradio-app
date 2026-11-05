@@ -42,7 +42,56 @@ class RemotePage extends StatelessWidget {
         _deviceCard(context, connected),
         _receiverCard(context, st, connected),
         _configCard(context, st, connected, p),
+        _encoderRow(context, connected),
       ],
+    );
+  }
+
+  // ---------------------------------------------------------- encoder row
+  Widget _encoderRow(BuildContext context, bool connected) {
+    final p = Pal(context);
+    Widget btn(IconData icon, String label, VoidCallback? onTap) => Expanded(
+          child: GestureDetector(
+            onTap: onTap,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: p.soft2,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon,
+                      size: 20,
+                      color: connected ? p.blue : p.muted),
+                  const SizedBox(height: 5),
+                  Text(label,
+                      style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                          color: connected ? p.ink : p.muted)),
+                ],
+              ),
+            ),
+          ),
+        );
+
+    return CardX(
+      child: Row(
+        children: [
+          btn(Icons.rotate_left, 'LEFT',
+              connected ? () => ble.encoderRotate(-1) : null),
+          btn(Icons.rotate_right, 'RIGHT',
+              connected ? () => ble.encoderRotate(1) : null),
+          btn(Icons.touch_app, 'CLICK',
+              connected ? ble.encoderClick : null),
+          btn(Icons.pan_tool, 'HOLD',
+              connected ? ble.encoderHold : null),
+        ],
+      ),
     );
   }
 
