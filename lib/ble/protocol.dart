@@ -83,6 +83,10 @@ class RadioStatus {
   final String? bwText;
   final int? agcIdx;
 
+  /// Raw frequency text/unit as shown by the radio (official firmware).
+  final String? rawFreq;
+  final String? rawUnit;
+
   const RadioStatus({
     required this.freqHz,
     required this.mode,
@@ -96,6 +100,8 @@ class RadioStatus {
     this.stepText,
     this.bwText,
     this.agcIdx,
+    this.rawFreq,
+    this.rawUnit,
   });
 
   static const List<String> modeNames = ['FM', 'AM', 'LSB', 'USB'];
@@ -105,8 +111,9 @@ class RadioStatus {
   ];
 
   /// Display unit per band (VHF/ham = MHz, MW/LW/SW = kHz).
-  bool get useMhz =>
-      bandText != null ? (freqHz >= 1000000) : (band == 0 || band >= 4);
+  bool get useMhz => rawUnit != null
+      ? rawUnit == 'MHz'
+      : (bandText != null ? (freqHz >= 1000000) : (band == 0 || band >= 4));
 
   String get modeName =>
       (mode >= 0 && mode < modeNames.length) ? modeNames[mode] : '?';
@@ -114,15 +121,16 @@ class RadioStatus {
   String get bandName =>
       bandText ?? ((band >= 0 && band < bandNames.length) ? bandNames[band] : '?');
 
-  String get unitLabel => useMhz ? 'MHz' : 'kHz';
+  String get unitLabel => rawUnit ?? (useMhz ? 'MHz' : 'kHz');
 
   /// Three decimals (default editor value).
-  String get freqText => useMhz
+  String get freqText => rawFreq ?? (useMhz
       ? (freqHz / 1000000).toStringAsFixed(3)
-      : (freqHz / 1000).toStringAsFixed(0);
+      : (freqHz / 1000).toStringAsFixed(0));
 
   /// Display form: FM 101.7 / SW 9.58 / MW 1000.
   String get freqLabel {
+    if (rawFreq != null) return rawFreq!;
     if (useMhz) {
       var s = (freqHz / 1000000).toStringAsFixed(3);
       while (s.endsWith('0') && s.split('.').last.length > 1) {
@@ -182,6 +190,19 @@ class RadioStatus {
         ? freq * 10000
         : freq * 1000 + ((modeStr == 'LSB' || modeStr == 'USB') ? bfo : 0);
 
+    String rawFreq;
+    String rawUnit;
+    if (modeStr == 'FM') {
+      rawFreq = (freq / 100).toStringAsFixed(1);
+      rawUnit = 'MHz';
+    } else if (modeStr == 'LSB' || modeStr == 'USB') {
+      rawFreq = ((freq * 1000 + bfo) / 1000).round().toString();
+      rawUnit = 'kHz';
+    } else {
+      rawFreq = '$freq';
+      rawUnit = 'kHz';
+    }
+
     return RadioStatus(
       freqHz: hz.abs(),
       mode: mode,
@@ -190,6 +211,8 @@ class RadioStatus {
       stepText: p[6].trim(),
       bwText: p[7].trim(),
       agcIdx: int.tryParse(p[8].trim()),
+      rawFreq: rawFreq,
+      rawUnit: rawUnit,
       volume: at(9),
       rssi: at(10),
       snr: at(11),

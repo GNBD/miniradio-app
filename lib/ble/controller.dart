@@ -295,7 +295,7 @@ class BleController extends ChangeNotifier {
 
   Future<void> setBand(int idx) async {
     if (isAts) {
-      const map = {0: 'VHF', 1: 'MW1', 2: 'MW1', 3: 'ALL'};
+      const map = {0: 'VHF', 1: 'MW2', 2: 'MW1', 3: '41M'};
       await _atsSelectBand(map[idx] ?? 'VHF');
       return;
     }

@@ -26,7 +26,8 @@ class RemotePage extends StatelessWidget {
 
   static const _quickBands = [
     (0, 'FM'),
-    (1, 'AM'),
+    (2, 'LW'),
+    (1, 'MW'),
     (3, 'SW'),
   ];
 
@@ -351,10 +352,12 @@ class RemotePage extends StatelessWidget {
           final active = ble.isAts
               ? (e.$1 == 0
                   ? n == 'VHF'
-                  : e.$1 == 1
-                      ? n.startsWith('MW')
-                      : !(n == 'VHF' || n.startsWith('MW')))
-              : (band == e.$1 || (e.$1 == 1 && band == 2));
+                  : e.$1 == 2
+                      ? n == 'MW1'
+                      : e.$1 == 1
+                          ? n.startsWith('MW') && n != 'MW1'
+                          : !(n == 'VHF' || n.startsWith('MW')))
+              : band == e.$1;
           return Expanded(
             child: GestureDetector(
               onTap: connected ? () => ble.setBand(e.$1) : null,
