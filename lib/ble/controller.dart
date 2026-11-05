@@ -63,6 +63,7 @@ class BleController extends ChangeNotifier {
 
   /// Saved (registered) device for auto-reconnect.
   String? savedDeviceId;
+  String? savedDeviceName;
   String? _autoTarget;
 
   /// Write mode negotiated during detection (ATS uses write-without-response).
@@ -141,12 +142,17 @@ class BleController extends ChangeNotifier {
   Future<void> loadSavedDevice() async {
     final p = await SharedPreferences.getInstance();
     savedDeviceId = p.getString('ble_device');
+    savedDeviceName = p.getString('ble_device_name');
   }
 
-  Future<void> _saveDevice(String id) async {
+  Future<void> _saveDevice(String id, String? name) async {
     savedDeviceId = id;
+    if (name != null && name.isNotEmpty) savedDeviceName = name;
     final p = await SharedPreferences.getInstance();
     await p.setString('ble_device', id);
+    if (savedDeviceName != null) {
+      await p.setString('ble_device_name', savedDeviceName!);
+    }
   }
 
   /// Try to reconnect to the registered device without user interaction.
@@ -167,7 +173,7 @@ class BleController extends ChangeNotifier {
   Future<void> connect(String id) async {
     error = null;
     deviceId = id;
-    deviceName = found[id];
+    deviceName = found[id] ?? savedDeviceName;
     _set(LinkState.connecting);
     try {
       await stopScan();
@@ -180,7 +186,7 @@ class BleController extends ChangeNotifier {
       await UniversalBle.connect(id)
           .timeout(const Duration(seconds: 20));
       _log('connected: $id');
-      await _saveDevice(id);
+      await _saveDevice(id, deviceName);
       try {
         await UniversalBle.requestMtu(id, 247)
             .timeout(const Duration(seconds: 5));
@@ -234,6 +240,34 @@ class BleController extends ChangeNotifier {
     protocol = RadioProtocol.unknown;
     _statusSeen = false;
     status = null;
+
+    // Prefer the advertised name: it is deterministic and avoids relying on
+    // the monitor toggle timing.
+    final nm = (deviceName ?? '').toUpperCase();
+    if (nm.contains('ATS')) {
+      protocol = RadioProtocol.ats;
+      _writeWithoutResponse = true;
+      for (int i = 0; i < 4 && !_statusSeen; i++) {
+        await sendBytes(const [0x74], 'probe',
+            withoutResponse: true);
+        for (int j = 0; j < 12 && !_statusSeen; j++) {
+          await Future.delayed(const Duration(milliseconds: 100));
+        }
+      }
+      debugPrint('BLE protocol: ats (name)');
+      notifyListeners();
+      return;
+    }
+    if (nm.contains('MINIRADIO')) {
+      protocol = RadioProtocol.gnbd;
+      _writeWithoutResponse = false;
+      for (int i = 0; i < 15 && !_statusSeen; i++) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      debugPrint('BLE protocol: gnbd (name)');
+      notifyListeners();
+      return;
+    }
 
     for (int attempt = 0; attempt < 3 && !_statusSeen; attempt++) {
       if (attempt == 0) {
