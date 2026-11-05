@@ -97,7 +97,7 @@ class RemotePage extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: FieldBox(
                       label: 'Step',
@@ -123,21 +123,23 @@ class RemotePage extends StatelessWidget {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FieldBox(
+                      label: 'Bandwidth',
+                      value: rs.bwLabel,
+                      child: dd<int>(
+                        rs.bwSel.clamp(0,
+                            rs.bwLabels.isEmpty ? 0 : rs.bwLabels.length - 1),
+                        [
+                          for (int i = 0; i < rs.bwLabels.length; i++)
+                            (i, rs.bwLabels[i])
+                        ],
+                        connected ? (v) => ble.setRadioSetting(1, v) : null,
+                      ),
+                    ),
+                  ),
                 ],
-              ),
-              const SizedBox(height: 10),
-              FieldBox(
-                label: 'Bandwidth',
-                value: rs.bwLabel,
-                child: dd<int>(
-                  rs.bwSel.clamp(
-                      0, rs.bwLabels.isEmpty ? 0 : rs.bwLabels.length - 1),
-                  [
-                    for (int i = 0; i < rs.bwLabels.length; i++)
-                      (i, rs.bwLabels[i])
-                  ],
-                  connected ? (v) => ble.setRadioSetting(1, v) : null,
-                ),
               ),
             ],
           ),
