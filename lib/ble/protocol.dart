@@ -65,8 +65,7 @@ class Cmd {
       [0x63, item & 0xFF, value & 0xFF];
 }
 
-class RadioStatus {
-  final int freqHz;
+class RadioStatus {  final int freqHz;
   final int mode;
   final int band;
   final int volume;
@@ -136,4 +135,75 @@ class RadioStatus {
       bleState: at(7, 2),
     );
   }
+
+  /// Official ATS Mini monitor line (15 CSV fields).
+  ///
+  /// version,freq,bfo,bandCal,bandName,mode,step,bw,agc,vol,rssi,snr,cap,volt,seq
+  static bool isAtsMonitor(String text) {
+    final p = text.trim().split(',');
+    if (p.length < 12) return false;
+    // field 4 is a band name, field 5 a mode name (not numeric)
+    return int.tryParse(p[4].trim()) == null && int.tryParse(p[5].trim()) == null;
+  }
+
+  static RadioStatus? parseAts(String text) {
+    final p = text.trim().split(',');
+    if (p.length < 12) return null;
+    int at(int i, [int fallback = 0]) =>
+        i < p.length ? (int.tryParse(p[i].trim()) ?? fallback) : fallback;
+
+    final bandName = p[4].trim().toUpperCase();
+    int band = bandNames.indexWhere((n) => n.toUpperCase() == bandName);
+    if (band < 0) band = 0;
+
+    final modeStr = p[5].trim().toUpperCase();
+    int mode = 0;
+    for (int i = 0; i < modeNames.length; i++) {
+      if (modeNames[i] == modeStr) mode = i;
+    }
+
+    final freq = at(1);
+    final bfo = at(2);
+    final int hz = (modeStr == 'FM')
+        ? freq * 10000
+        : freq * 1000 + ((modeStr == 'LSB' || modeStr == 'USB') ? bfo : 0);
+
+    return RadioStatus(
+      freqHz: hz.abs(),
+      mode: mode,
+      band: band,
+      volume: at(9),
+      rssi: at(10),
+      snr: at(11),
+      battery: -1,
+      bleState: 2,
+    );
+  }
+}
+
+/// Official ATS Mini ad hoc key commands.
+class AtsCmd {
+  static const String encUp = 'R';
+  static const String encDown = 'r';
+  static const String click = 'e';
+  static const String shortPress = 'E';
+  static const String volUp = 'V';
+  static const String volDown = 'v';
+  static const String bandNext = 'B';
+  static const String bandPrev = 'b';
+  static const String modeNext = 'M';
+  static const String modePrev = 'm';
+  static const String stepNext = 'S';
+  static const String stepPrev = 's';
+  static const String bwNext = 'W';
+  static const String bwPrev = 'w';
+  static const String agcUp = 'A';
+  static const String agcDown = 'a';
+  static const String screenUp = 'L';
+  static const String screenDown = 'l';
+  static const String sleepOn = 'O';
+  static const String sleepOff = 'o';
+  static const String monitorToggle = 't';
+
+  static String setFreq(int hz) => 'F$hz\r';
 }

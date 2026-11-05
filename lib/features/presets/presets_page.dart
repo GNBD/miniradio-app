@@ -21,6 +21,29 @@ class PresetsPage extends StatelessWidget {
     final connected = ble.state == LinkState.connected;
     final list = ble.presets;
 
+    if (ble.isAts) {
+      return ListView(
+        padding: const EdgeInsets.only(bottom: 110),
+        children: [
+          CardX(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const CardHead(
+                    title: 'Presets', overline: 'ATS MINI FIRMWARE'),
+                const SizedBox(height: 10),
+                Text(
+                  'Memory slots on the official ATS Mini firmware are not '
+                  'available in this app yet.',
+                  style: TextStyle(fontSize: 12, color: p.muted, height: 1.5),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
     return ListView(
       padding: const EdgeInsets.only(bottom: 110),
       children: [

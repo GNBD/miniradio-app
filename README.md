@@ -14,6 +14,9 @@ weather / EiBi schedule / time and forwards the result over BLE.
 - Radio tab: step / bandwidth / AGC / squelch / FM options
 - Network bridge: weather, EiBi download and clock sync without radio Wi-Fi
 - Automatic reconnect to the last used radio
+- Two firmware protocols, auto-detected:
+  - **GNBD miniradio** (1-char commands + binary settings)
+  - **Official ATS Mini** (`esp32-si4732/ats-mini`, ad hoc key protocol + monitor CSV)
 
 ## Requirements
 

@@ -24,6 +24,10 @@ class RadioPage extends StatelessWidget {
     final connected = ble.state == LinkState.connected;
     final fm = rs.fmBand || (st?.band == 0);
 
+    if (ble.isAts) {
+      return _atsView(context, p, st, connected);
+    }
+
     return ListView(
       padding: const EdgeInsets.only(bottom: 110),
       children: [
@@ -218,6 +222,103 @@ class RadioPage extends StatelessWidget {
     _lastValue = value;
     _lastAt = now;
     ble.setRadioSetting(item, value);
+  }
+
+  /// Official ATS Mini firmware exposes key-based controls only.
+  Widget _atsView(
+      BuildContext context, Pal p, RadioStatus? st, bool connected) {
+    Widget stepper(
+            String label, VoidCallback? dec, VoidCallback? inc) =>
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(label,
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: p.ink)),
+              ),
+              _round(Icons.remove, dec),
+              const SizedBox(width: 8),
+              _round(Icons.add, inc),
+            ],
+          ),
+        );
+
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 110),
+      children: [
+        CardX(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const CardHead(
+                  title: 'Radio Settings', overline: 'ATS MINI FIRMWARE'),
+              const SizedBox(height: 8),
+              Text(
+                'Official ATS Mini firmware supports key-based control only.',
+                style: TextStyle(fontSize: 11, color: p.muted),
+              ),
+              const SizedBox(height: 10),
+              stepper('Tuning step',
+                  connected ? () => ble.stepCycle(-1) : null,
+                  connected ? () => ble.stepCycle(1) : null),
+              stepper('Bandwidth', connected ? () => ble.bwCycle(-1) : null,
+                  connected ? () => ble.bwCycle(1) : null),
+              stepper('AGC / Attenuator',
+                  connected ? () => ble.agcCycle(-1) : null,
+                  connected ? () => ble.agcCycle(1) : null),
+              stepper('Backlight',
+                  connected ? () => ble.backlightCycle(-1) : null,
+                  connected ? () => ble.backlightCycle(1) : null),
+            ],
+          ),
+        ),
+        CardX(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const CardHead(title: 'Status', overline: 'MONITOR'),
+              const SizedBox(height: 10),
+              _kv(p, 'Frequency',
+                  st == null ? '—' : '${st.freqLabel} ${st.unitLabel}'),
+              const SizedBox(height: 8),
+              _kv(p, 'Mode / Band',
+                  st == null ? '—' : '${st.modeName} · ${st.bandName}'),
+              const SizedBox(height: 8),
+              _kv(p, 'RSSI / SNR',
+                  st == null ? '—' : '${st.rssi} / ${st.snr} dB'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _kv(Pal p, String k, String v) => FieldBox(
+        label: k,
+        child: Text(v,
+            style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: p.ink)),
+      );
+
+  Widget _round(IconData i, VoidCallback? onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF2F4F8),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(i, size: 18, color: const Color(0xFF6B7280)),
+      ),
+    );
   }
 
   Widget _switchRow(

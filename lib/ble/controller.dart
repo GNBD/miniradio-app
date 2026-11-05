@@ -20,6 +20,9 @@ import '../models/radio_settings.dart';
 
 enum LinkState { idle, scanning, connecting, connected }
 
+/// Which firmware protocol the connected radio speaks.
+enum RadioProtocol { unknown, gnbd, ats }
+
 class BleController extends ChangeNotifier {
   BleController() {
     UniversalBle.onScanResult = _onScan;
@@ -28,6 +31,11 @@ class BleController extends ChangeNotifier {
   }
 
   LinkState state = LinkState.idle;
+  RadioProtocol protocol = RadioProtocol.unknown;
+  bool _statusSeen = false;
+
+  bool get isAts => protocol == RadioProtocol.ats;
+  bool get isGnbd => protocol == RadioProtocol.gnbd;
   String? deviceId;
   String? deviceName;
   String? error;
@@ -165,10 +173,13 @@ class BleController extends ChangeNotifier {
       debugPrint('BLE: subscribed');
       _log('notify subscribed');
       _set(LinkState.connected);
-      await send(Cmd.query);
-      await send(Cmd.presetList);
-      await send(Cmd.getSettings);
-      await setBridgeEnabled(bridgeEnabled);
+      await _detectProtocol();
+      if (isGnbd) {
+        await send(Cmd.query);
+        await send(Cmd.presetList);
+        await send(Cmd.getSettings);
+        await setBridgeEnabled(bridgeEnabled);
+      }
     } catch (e) {
       error = '$e';
       _log('connect failed: $e');
@@ -187,51 +198,127 @@ class BleController extends ChangeNotifier {
     _set(LinkState.idle);
   }
 
+  /// Send the official monitor toggle ('t'). The GNBD firmware ignores it,
+  /// while ATS Mini starts streaming its monitor CSV.
+  Future<void> _detectProtocol() async {
+    protocol = RadioProtocol.unknown;
+    _statusSeen = false;
+    status = null;
+    await sendRaw(AtsCmd.monitorToggle, 'probe');
+    for (int i = 0; i < 25 && !_statusSeen; i++) {
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+    if (protocol == RadioProtocol.unknown) {
+      protocol = RadioProtocol.gnbd;
+    }
+    debugPrint('BLE protocol: $protocol');
+    notifyListeners();
+  }
+
+  Future<void> sendRaw(String cmd, String label) async {
+    await sendBytes(utf8.encode(cmd), label);
+  }
+
   Future<void> send(String cmd) async {
     await sendBytes(utf8.encode(cmd), cmd);
   }
 
   /// Absolute volume (0..63).
   Future<void> setVolume(int v) async {
+    if (isAts) {
+      final cur = status?.volume ?? 0;
+      final delta = (v - cur).clamp(-63, 63);
+      for (int i = 0; i < delta.abs(); i++) {
+        await sendRaw(delta > 0 ? AtsCmd.volUp : AtsCmd.volDown, 'vol');
+        await Future.delayed(const Duration(milliseconds: 25));
+      }
+      return;
+    }
     await sendBytes(Cmd.setVolume(v), 'V$v');
   }
 
   /// Absolute frequency (Hz).
   Future<void> setFrequency(int hz) async {
+    if (isAts) {
+      await sendRaw(AtsCmd.setFreq(hz), 'F$hz');
+      return;
+    }
     await sendBytes(Cmd.setFreq(hz), 'F$hz');
   }
 
   Future<void> setBand(int idx) async {
+    if (isAts) return; // band cycling differs; use the keypad/encoder on device
     await sendBytes(Cmd.setBand(idx), 'B$idx');
   }
 
   Future<void> setMode(int idx) async {
+    if (isAts) {
+      int cur = status?.mode ?? 0;
+      for (int i = 0; i < 4 && cur != idx; i++) {
+        await sendRaw(AtsCmd.modeNext, 'M');
+        await Future.delayed(const Duration(milliseconds: 120));
+        cur = (cur + 1) % 4;
+      }
+      return;
+    }
     await sendBytes(Cmd.setMode(idx), 'O$idx');
   }
 
   Future<void> loadPresets() async {
+    if (isAts) return;
     await send(Cmd.presetList);
   }
 
   Future<void> savePreset() async {
+    if (isAts) return;
     await send(Cmd.presetSave);
   }
 
   Future<void> tunePreset(int idx) async {
+    if (isAts) return;
     await sendBytes(Cmd.presetTune(idx), 'T$idx');
   }
 
   Future<void> deletePreset(int idx) async {
+    if (isAts) return;
     await sendBytes(Cmd.presetDelete(idx), 'X$idx');
   }
 
   Future<void> loadRadioSettings() async {
+    if (isAts) return;
     await send(Cmd.getSettings);
   }
 
   /// item: 0=step 1=bw 2=agc 3=squelch 4=rds 5=stereo 6=deemph
   Future<void> setRadioSetting(int item, int value) async {
+    if (isAts) return;
     await sendBytes(Cmd.setSetting(item, value), 'c$item=$value');
+  }
+
+  // ---- ATS Mini key-based controls ----
+
+  Future<void> stepCycle(int dir) async {
+    if (!isAts) return;
+    await sendRaw(dir > 0 ? AtsCmd.stepNext : AtsCmd.stepPrev, 'step');
+  }
+
+  Future<void> bwCycle(int dir) async {
+    if (!isAts) return;
+    await sendRaw(dir > 0 ? AtsCmd.bwNext : AtsCmd.bwPrev, 'bw');
+  }
+
+  Future<void> agcCycle(int dir) async {
+    if (!isAts) return;
+    await sendRaw(dir > 0 ? AtsCmd.agcUp : AtsCmd.agcDown, 'agc');
+  }
+
+  Future<void> backlightCycle(int dir) async {
+    if (!isAts) return;
+    await sendRaw(dir > 0 ? AtsCmd.screenUp : AtsCmd.screenDown, 'light');
+  }
+
+  Future<void> toggleMonitor() async {
+    await sendRaw(AtsCmd.monitorToggle, 'monitor');
   }
 
   Future<void> setBridgeEnabled(bool on) async {
@@ -318,6 +405,20 @@ class BleController extends ChangeNotifier {
     if (v.characteristicId.toUpperCase() != Nus.tx.toUpperCase()) return;
     final text = utf8.decode(v.value, allowMalformed: true).trim();
     debugPrint('BLE RX: $text');
+
+    // Official ATS Mini monitor stream (15 CSV fields).
+    if (RadioStatus.isAtsMonitor(text)) {
+      final st = RadioStatus.parseAts(text);
+      if (st != null) {
+        protocol = RadioProtocol.ats;
+        _statusSeen = true;
+        final nowMs = DateTime.now().millisecondsSinceEpoch;
+        status = st;
+        _lastStatusMs = nowMs;
+        notifyListeners();
+      }
+      return;
+    }
 
     // Preset list protocol: PC,<count> / P,<i>,<freq>,<band>,<mode>[,name] /
     //                        N,<i>,<name> / PE
@@ -440,6 +541,8 @@ class BleController extends ChangeNotifier {
 
     final st = RadioStatus.parse(text);
     if (st != null) {
+      protocol = RadioProtocol.gnbd;
+      _statusSeen = true;
       final old = status;
       final nowMs = DateTime.now().millisecondsSinceEpoch;
       final coreChanged = old == null ||

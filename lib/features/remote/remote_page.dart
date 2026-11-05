@@ -209,7 +209,7 @@ class RemotePage extends StatelessWidget {
                     const SizedBox(height: 18),
                     _signalRow(st),
                     const SizedBox(height: 16),
-                    _bandRow(context, band, connected),
+                    if (!ble.isAts) _bandRow(context, band, connected),
                     const SizedBox(height: 12),
                     _tuningRow(context, connected, useMhz),
                   ],

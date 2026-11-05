@@ -82,21 +82,25 @@ class SettingsPage extends StatelessWidget {
                                 fontWeight: FontWeight.w600,
                                 color: p.ink)),
                         Text(
-                          ble.bridgeEnabled
-                              ? (ble.bridgeBusy
-                                  ? 'Serving request…'
-                                  : 'On · weather and EiBi use this phone')
-                              : 'Off · radio uses its own Wi-Fi',
+                          ble.isAts
+                              ? 'Not available with ATS Mini firmware'
+                              : ble.bridgeEnabled
+                                  ? (ble.bridgeBusy
+                                      ? 'Serving request…'
+                                      : 'On · weather and EiBi use this phone')
+                                  : 'Off · radio uses its own Wi-Fi',
                           style: TextStyle(fontSize: 10.5, color: p.muted),
                         ),
                       ],
                     ),
                   ),
                   Switch(
-                    value: ble.bridgeEnabled,
+                    value: ble.bridgeEnabled && !ble.isAts,
                     activeThumbColor: Colors.white,
                     activeTrackColor: p.green,
-                    onChanged: (v) => ble.setBridgeEnabled(v),
+                    onChanged: ble.isAts
+                        ? null
+                        : (v) => ble.setBridgeEnabled(v),
                   ),
                 ],
               ),
@@ -171,7 +175,8 @@ class SettingsPage extends StatelessWidget {
               const SizedBox(height: 12),
               _row(p, 'Version', '0.1.0 beta'),
               const Divider(height: 20),
-              _row(p, 'Protocol', 'BLE NUS'),
+              _row(p, 'Protocol',
+                  ble.isAts ? 'ATS Mini (ad hoc)' : 'GNBD (BLE NUS)'),
               const SizedBox(height: 12),
               GestureDetector(
                 onTap: () => showLicensePage(
