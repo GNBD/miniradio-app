@@ -75,127 +75,142 @@ class RemotePage extends StatelessWidget {
       );
     }
 
-    return CardX(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const CardHead(title: 'Radio Settings', overline: 'LIVE FROM DEVICE'),
-          const SizedBox(height: 14),
-          FieldBox(
-            label: 'Volume',
-            value: '${(st?.volume ?? 0).clamp(0, 63)}',
-            child: Slider(
-              min: 0,
-              max: 63,
-              divisions: 63,
-              value: (st?.volume ?? 0).clamp(0, 63).toDouble(),
-              activeColor: p.blue,
-              onChanged:
-                  connected ? (v) => ble.setVolume(v.round()) : null,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
+    return Column(
+      children: [
+        CardX(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: FieldBox(
-                  label: 'Mode',
-                  child: dd<int>(
-                    st?.mode.clamp(0, 3),
-                    [
-                      for (int i = 0; i < RadioStatus.modeNames.length; i++)
-                        (i, RadioStatus.modeNames[i])
-                    ],
-                    connected ? ble.setMode : null,
+              const CardHead(title: 'Tuning', overline: 'RADIO SETTINGS'),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: FieldBox(
+                      label: 'Mode',
+                      child: dd<int>(
+                        st?.mode.clamp(0, 3),
+                        [
+                          for (int i = 0; i < RadioStatus.modeNames.length; i++)
+                            (i, RadioStatus.modeNames[i])
+                        ],
+                        connected ? ble.setMode : null,
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FieldBox(
+                      label: 'Step',
+                      value: rs.stepLabel,
+                      child: dd<int>(
+                        rs.stepSel.clamp(0,
+                            rs.stepHz.isEmpty ? 0 : rs.stepHz.length - 1),
+                        [
+                          for (int i = 0; i < rs.stepHz.length; i++)
+                            (
+                              i,
+                              i == 0
+                                  ? 'BAND DEFAULT'
+                                  : (rs.stepHz[i] >= 1000 &&
+                                          rs.stepHz[i] % 1000 == 0
+                                      ? '${rs.stepHz[i] ~/ 1000} kHz'
+                                      : '${rs.stepHz[i]} Hz')
+                            )
+                        ],
+                        connected
+                            ? (v) => ble.setRadioSetting(0, v)
+                            : null,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: FieldBox(
-                  label: 'Tuning Step',
-                  value: rs.stepLabel,
-                  child: dd<int>(
-                    rs.stepSel.clamp(
-                        0, rs.stepHz.isEmpty ? 0 : rs.stepHz.length - 1),
-                    [
-                      for (int i = 0; i < rs.stepHz.length; i++)
-                        (
-                          i,
-                          i == 0
-                              ? 'BAND DEFAULT'
-                              : (rs.stepHz[i] >= 1000 &&
-                                      rs.stepHz[i] % 1000 == 0
-                                  ? '${rs.stepHz[i] ~/ 1000} kHz'
-                                  : '${rs.stepHz[i]} Hz')
-                        )
-                    ],
-                    connected ? (v) => ble.setRadioSetting(0, v) : null,
-                  ),
+              const SizedBox(height: 10),
+              FieldBox(
+                label: 'Bandwidth',
+                value: rs.bwLabel,
+                child: dd<int>(
+                  rs.bwSel.clamp(
+                      0, rs.bwLabels.isEmpty ? 0 : rs.bwLabels.length - 1),
+                  [
+                    for (int i = 0; i < rs.bwLabels.length; i++)
+                      (i, rs.bwLabels[i])
+                  ],
+                  connected ? (v) => ble.setRadioSetting(1, v) : null,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          FieldBox(
-            label: 'Bandwidth',
-            value: rs.bwLabel,
-            child: dd<int>(
-              rs.bwSel.clamp(0, rs.bwLabels.isEmpty ? 0 : rs.bwLabels.length - 1),
-              [
-                for (int i = 0; i < rs.bwLabels.length; i++)
-                  (i, rs.bwLabels[i])
+        ),
+        CardX(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const CardHead(title: 'Levels', overline: 'RADIO SETTINGS'),
+              const SizedBox(height: 12),
+              FieldBox(
+                label: 'Volume',
+                value: '${(st?.volume ?? 0).clamp(0, 63)}',
+                child: Slider(
+                  min: 0,
+                  max: 63,
+                  divisions: 63,
+                  value: (st?.volume ?? 0).clamp(0, 63).toDouble(),
+                  activeColor: p.blue,
+                  onChanged:
+                      connected ? (v) => ble.setVolume(v.round()) : null,
+                ),
+              ),
+              const SizedBox(height: 10),
+              FieldBox(
+                label: 'AGC',
+                value: rs.agcLabel,
+                child: Slider(
+                  min: 0,
+                  max: (rs.agcMax + 1).toDouble().clamp(1, 40),
+                  divisions: (rs.agcMax + 1).clamp(1, 40),
+                  value: rs.agcSel
+                      .clamp(0, (rs.agcMax + 1).clamp(1, 40))
+                      .toDouble(),
+                  activeColor: p.blue,
+                  onChanged: connected
+                      ? (v) => ble.setRadioSetting(2, v.round())
+                      : null,
+                ),
+              ),
+              const SizedBox(height: 10),
+              FieldBox(
+                label: 'Squelch',
+                value: rs.squelch == 0 ? 'OFF' : '${rs.squelch}',
+                child: Slider(
+                  min: 0,
+                  max: 100,
+                  divisions: 100,
+                  value: rs.squelch.clamp(0, 100).toDouble(),
+                  activeColor: p.blue,
+                  onChanged: connected
+                      ? (v) => ble.setRadioSetting(3, v.round())
+                      : null,
+                ),
+              ),
+              if (fm) ...[
+                const SizedBox(height: 6),
+                _switchRow(context, 'RDS', 'Radio Data System', rs.rdsOn,
+                    connected ? (v) => ble.setRadioSetting(4, v ? 0 : 1) : null),
+                _switchRow(context, 'Stereo', 'Force mono when off', !rs.stereo,
+                    connected ? (v) => ble.setRadioSetting(5, v ? 0 : 1) : null),
+                _switchRow(
+                    context,
+                    'De-emphasis 75 us',
+                    'Off = 50 us',
+                    rs.deemph75,
+                    connected ? (v) => ble.setRadioSetting(6, v ? 1 : 0) : null),
               ],
-              connected ? (v) => ble.setRadioSetting(1, v) : null,
-            ),
+            ],
           ),
-          const SizedBox(height: 10),
-          FieldBox(
-            label: 'AGC',
-            value: rs.agcLabel,
-            child: Slider(
-              min: 0,
-              max: (rs.agcMax + 1).toDouble().clamp(1, 40),
-              divisions: (rs.agcMax + 1).clamp(1, 40),
-              value: rs.agcSel
-                  .clamp(0, (rs.agcMax + 1).clamp(1, 40))
-                  .toDouble(),
-              activeColor: p.blue,
-              onChanged: connected
-                  ? (v) => ble.setRadioSetting(2, v.round())
-                  : null,
-            ),
-          ),
-          const SizedBox(height: 10),
-          FieldBox(
-            label: 'Squelch',
-            value: rs.squelch == 0 ? 'OFF' : '${rs.squelch}',
-            child: Slider(
-              min: 0,
-              max: 100,
-              divisions: 100,
-              value: rs.squelch.clamp(0, 100).toDouble(),
-              activeColor: p.blue,
-              onChanged: connected
-                  ? (v) => ble.setRadioSetting(3, v.round())
-                  : null,
-            ),
-          ),
-          if (fm) ...[
-            const SizedBox(height: 6),
-            _switchRow(context, 'RDS', 'Radio Data System', rs.rdsOn,
-                connected ? (v) => ble.setRadioSetting(4, v ? 0 : 1) : null),
-            _switchRow(context, 'Stereo', 'Force mono when off', !rs.stereo,
-                connected ? (v) => ble.setRadioSetting(5, v ? 0 : 1) : null),
-            _switchRow(
-                context,
-                'De-emphasis 75 µs',
-                'Off = 50 µs',
-                rs.deemph75,
-                connected ? (v) => ble.setRadioSetting(6, v ? 1 : 0) : null),
-          ],
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -409,7 +424,7 @@ class RemotePage extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          '$mode · ${(st?.mode ?? 0) == 0 ? 'STEREO' : 'RECEIVE'}',
+                          mode,
                           style: const TextStyle(
                             color: Color(0xFFB8C9E4),
                             fontSize: 10,

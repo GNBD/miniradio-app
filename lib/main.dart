@@ -131,19 +131,18 @@ class _HomeShellState extends State<HomeShell> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('WIRELESS RECEIVER INTERFACE',
-                    style: TextStyle(
-                        fontSize: 9.5,
-                        letterSpacing: 1.5,
-                        fontWeight: FontWeight.w800,
-                        color: p.muted)),
-                const SizedBox(height: 4),
-                Text('Radio Control',
+                Text('Mini Control',
                     style: TextStyle(
                         fontSize: 27,
                         letterSpacing: -0.8,
                         fontWeight: FontWeight.w700,
                         color: p.ink)),
+                Text('by GNBD',
+                    style: TextStyle(
+                        fontSize: 11,
+                        letterSpacing: 1.2,
+                        fontWeight: FontWeight.w600,
+                        color: p.muted)),
               ],
             ),
           ),
