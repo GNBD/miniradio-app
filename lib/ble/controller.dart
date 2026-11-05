@@ -576,7 +576,7 @@ class BleController extends ChangeNotifier {
     final p = t.split(',');
     if (p.length == 8 && int.tryParse(p[0].trim()) != null) return true; // GNBD status
     for (final pre in const [
-      'PC,', 'P,', 'N,', 'PE', 'SI,', 'BRQ,', '#',
+      'PC,', 'P,', 'N,', 'PE', 'SI,', 'BRQ,', '#', 'TIM',
       'RSTEP,', 'RBW,', 'RAGC,', 'RSQ,', 'RRDS,', 'RSTE,', 'RDE,', 'RMODE,',
     ]) {
       if (t.startsWith(pre)) return true;
