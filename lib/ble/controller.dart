@@ -188,6 +188,9 @@ class BleController extends ChangeNotifier {
 
   Future<void> connect(String rawId) async {
     final id = _normId(rawId);
+    if (state == LinkState.connected && deviceId == id) {
+      return;
+    }
     error = null;
     deviceId = id;
     deviceName = found[id] ?? savedDeviceName;
@@ -196,13 +199,7 @@ class BleController extends ChangeNotifier {
       await stopScan();
       debugPrint('BLE: connecting $id');
       try {
-        await UniversalBle.disconnect(id)
-            .timeout(const Duration(seconds: 3));
-      } catch (_) {}
-      try {
-        await UniversalBle.unpair(id)
-            .timeout(const Duration(seconds: 3));
-        debugPrint('BLE: old bond cleared');
+        await UniversalBle.unpair(id).timeout(const Duration(seconds: 3));
       } catch (_) {}
 
       bool linked = false;
@@ -238,14 +235,30 @@ class BleController extends ChangeNotifier {
       await _saveDevice(id, deviceName);
       try {
         await UniversalBle.requestMtu(id, 247)
-            .timeout(const Duration(seconds: 5));
+            .timeout(const Duration(seconds: 2));
         debugPrint('BLE: mtu done');
       } catch (e) {
         debugPrint('BLE: mtu skipped $e');
       }
-      await UniversalBle.discoverServices(id)
-          .timeout(const Duration(seconds: 15));
-      debugPrint('BLE: services done');
+      try {
+        await UniversalBle.discoverServices(id)
+            .timeout(const Duration(seconds: 12));
+        debugPrint('BLE: services done');
+      } catch (e) {
+        // Stale GATT cache: reconnect once with a clean bond/cache.
+        debugPrint('BLE: discovery failed, retrying: $e');
+        try {
+          await UniversalBle.disconnect(id).timeout(const Duration(seconds: 4));
+        } catch (_) {}
+        try {
+          await UniversalBle.unpair(id).timeout(const Duration(seconds: 3));
+        } catch (_) {}
+        await Future.delayed(const Duration(seconds: 2));
+        await UniversalBle.connect(id).timeout(const Duration(seconds: 15));
+        await UniversalBle.discoverServices(id)
+            .timeout(const Duration(seconds: 15));
+        debugPrint('BLE: services done (retry)');
+      }
       await UniversalBle.subscribeNotifications(id, Nus.service, Nus.tx)
           .timeout(const Duration(seconds: 10));
       debugPrint('BLE: subscribed');
@@ -289,7 +302,6 @@ class BleController extends ChangeNotifier {
   Future<void> _detectProtocol() async {
     protocol = RadioProtocol.unknown;
     _statusSeen = false;
-    status = null;
 
     // Prefer the advertised name: it is deterministic and avoids relying on
     // the monitor toggle timing.
