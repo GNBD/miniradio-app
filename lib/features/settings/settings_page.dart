@@ -6,6 +6,7 @@
  * Settings tab: app preferences + live radio values.
  */
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../ble/controller.dart';
 import '../../ble/protocol.dart';
@@ -200,6 +201,23 @@ class SettingsPage extends StatelessWidget {
                         style: TextStyle(fontSize: 12, color: p.blue)),
                     const Spacer(),
                     Icon(Icons.chevron_right, size: 16, color: p.muted),
+                  ],
+                ),
+              ),
+              const Divider(height: 20),
+              GestureDetector(
+                onTap: () => launchUrl(
+                  Uri.parse('https://github.com/GNBD/miniradio-app'),
+                  mode: LaunchMode.externalApplication,
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.code, size: 16, color: p.blue),
+                    const SizedBox(width: 8),
+                    Text('GitHub',
+                        style: TextStyle(fontSize: 12, color: p.blue)),
+                    const Spacer(),
+                    Icon(Icons.open_in_new, size: 14, color: p.muted),
                   ],
                 ),
               ),

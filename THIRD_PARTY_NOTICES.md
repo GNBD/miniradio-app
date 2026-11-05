@@ -14,6 +14,7 @@ licenses apply to those components.
 | Package | License |
 | --- | --- |
 | universal_ble | BSD 3-Clause License |
+| url_launcher (and platform implementations) | BSD 3-Clause License, Copyright 2013 The Flutter Authors |
 | shared_preferences (and platform implementations) | BSD 3-Clause License, Copyright 2013 The Flutter Authors |
 | cupertino_icons | MIT License |
 | vector_math | BSD 3-Clause License |
