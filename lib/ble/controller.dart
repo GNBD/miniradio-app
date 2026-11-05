@@ -68,6 +68,9 @@ class BleController extends ChangeNotifier {
   /// Manual protocol override: 'auto' | 'gnbd' | 'ats'.
   String protocolPref = 'auto';
 
+  /// Write mode negotiated during detection (ATS uses write-without-response).
+  bool _writeWithoutResponse = false;
+
   void _set(LinkState s) {
     state = s;
     notifyListeners();
@@ -216,16 +219,32 @@ class BleController extends ChangeNotifier {
 
     if (protocolPref == 'gnbd') {
       protocol = RadioProtocol.gnbd;
+      _writeWithoutResponse = false;
       return;
     }
     if (protocolPref == 'ats') {
       protocol = RadioProtocol.ats;
+      _writeWithoutResponse = true;
       await sendRaw(AtsCmd.monitorToggle, 'monitor');
       return;
     }
 
     for (int attempt = 0; attempt < 3 && !_statusSeen; attempt++) {
-      await sendRaw(AtsCmd.monitorToggle, 'probe');
+      if (attempt == 0) {
+        // The official firmware exposes RX as write-without-response only,
+        // the GNBD firmware as write-with-response only. Probe accordingly.
+        try {
+          await sendBytes(const [0x74], 'probe',
+              withoutResponse: true, rethrowError: true);
+          _writeWithoutResponse = true;
+        } catch (_) {
+          _writeWithoutResponse = false;
+          await sendBytes(const [0x74], 'probe', withoutResponse: false);
+        }
+      } else {
+        await sendBytes(const [0x74], 'probe',
+            withoutResponse: _writeWithoutResponse);
+      }
       for (int i = 0; i < 12 && !_statusSeen; i++) {
         await Future.delayed(const Duration(milliseconds: 100));
       }
@@ -421,29 +440,53 @@ class BleController extends ChangeNotifier {
     await sendBytes(frame, 'bridge data ${data.length}B');
   }
 
-  Future<void> sendBytes(List<int> bytes, String label) async {
+  Future<void> sendBytes(List<int> bytes, String label,
+      {bool? withoutResponse, bool rethrowError = false}) async {
     final id = deviceId;
     if (id == null || state != LinkState.connected) return;
+    final nr = withoutResponse ??
+        (protocol == RadioProtocol.ats);
     try {
       await UniversalBle.write(
         id,
         Nus.service,
         Nus.rx,
         Uint8List.fromList(bytes),
+        withoutResponse: nr,
       );
       _log('TX $label');
-      debugPrint('BLE TX $label');
+      debugPrint('BLE TX $label${nr ? ' (nr)' : ''}');
     } catch (e) {
       _log('write failed: $e');
       debugPrint('BLE TX failed $label: $e');
+      if (rethrowError) rethrow;
     }
   }
 
+  String _rxPending = '';
+
   void _onValue(BleCharacteristicValue v) {
     if (v.characteristicId.toUpperCase() != Nus.tx.toUpperCase()) return;
-    final text = utf8.decode(v.value, allowMalformed: true).trim();
-    debugPrint('BLE RX: $text');
+    final text = utf8.decode(v.value, allowMalformed: true);
+    debugPrint('BLE RX: ${text.trim()}');
 
+    // The official firmware terminates every line with CRLF, while the GNBD
+    // firmware sends one unframed line per notification.
+    if (text.contains('\n')) {
+      _rxPending += text;
+      final parts = _rxPending.split('\n');
+      _rxPending = parts.removeLast();
+      for (final line in parts) {
+        final t = line.trim();
+        if (t.isNotEmpty) _handleRxText(t);
+      }
+    } else {
+      final t = text.trim();
+      if (t.isNotEmpty) _handleRxText(t);
+    }
+  }
+
+  void _handleRxText(String text) {
     // Official ATS Mini monitor stream (15 CSV fields).
     if (RadioStatus.isAtsMonitor(text)) {
       final st = RadioStatus.parseAts(text);
