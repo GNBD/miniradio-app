@@ -213,6 +213,8 @@ class BleController extends ChangeNotifier {
       } else if (isAts) {
         await loadPresets();
         _startWatchdog();
+      } else if (isGnbd) {
+        await pushTime();
       }
     } catch (e) {
       error = '$e';
@@ -532,7 +534,21 @@ class BleController extends ChangeNotifier {
     for (int i = 0; i < 8; i++) {
       frame.add((secs >> (8 * i)) & 0xFF);
     }
-    await sendBytes(frame, 'time $secs');
+    await sendBytes(frame, 'time reply');
+  }
+
+  List<int> _timeFrame() {
+    final secs = DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000;
+    final frame = <int>[0x5A];
+    for (int i = 0; i < 8; i++) {
+      frame.add((secs >> (8 * i)) & 0xFF);
+    }
+    return frame;
+  }
+
+  Future<void> pushTime() async {
+    if (!isGnbd) return;
+    await sendBytes(_timeFrame(), 'time');
   }
 
   Future<void> _sendBridgeChunk(int id, List<int> data) async {    final frame = <int>[
