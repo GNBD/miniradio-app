@@ -22,7 +22,6 @@ class RemotePage extends StatelessWidget {
   final BleController ble;
   final VoidCallback onConnectTap;
 
-  static const int _stepHz = 100000;
 
   @override
   Widget build(BuildContext context) {
@@ -783,10 +782,6 @@ class RemotePage extends StatelessWidget {
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.8)),
-              const SizedBox(height: 3),
-              Text('Step · ${_stepLabel(_stepHz)}',
-                  style: const TextStyle(
-                      color: Color(0xFFB8C9E4), fontSize: 10)),
             ],
           ),
         ),
@@ -795,12 +790,6 @@ class RemotePage extends StatelessWidget {
     );
   }
 
-  String _stepLabel(int hz) {
-    if (hz >= 1000000) return '${hz ~/ 1000000} MHz';
-    return '${hz ~/ 1000} kHz';
-  }
-
-  // ------------------------------------------------------------- config
   // ------------------------------------------------------- freq editor
   Future<void> _editFrequency(BuildContext context, RadioStatus? st) async {
     if (st == null) return;
