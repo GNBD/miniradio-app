@@ -66,9 +66,6 @@ class BleController extends ChangeNotifier {
   String? savedDeviceName;
   String? _autoTarget;
 
-  /// Manual protocol override: 'auto' | 'gnbd' | 'ats'.
-  String protocolPref = 'auto';
-
   /// Write mode negotiated during detection (ATS uses write-without-response).
   bool _writeWithoutResponse = false;
 
@@ -148,27 +145,6 @@ class BleController extends ChangeNotifier {
     final p = await SharedPreferences.getInstance();
     savedDeviceId = p.getString('ble_device');
     savedDeviceName = p.getString('ble_device_name');
-    protocolPref = p.getString('radio_protocol') ?? 'auto';
-  }
-
-  Future<void> setProtocolPref(String value) async {
-    protocolPref = value;
-    final p = await SharedPreferences.getInstance();
-    await p.setString('radio_protocol', value);
-    if (state == LinkState.connected) {
-      _stopWatchdog();
-      await _detectProtocol();
-      if (isGnbd) {
-        await send(Cmd.query);
-        await send(Cmd.presetList);
-        await send(Cmd.getSettings);
-        await setBridgeEnabled(bridgeEnabled);
-      } else if (isAts) {
-        await loadPresets();
-        _startWatchdog();
-      }
-    }
-    notifyListeners();
   }
 
   Future<void> _saveDevice(String id, String? name) async {
@@ -266,28 +242,6 @@ class BleController extends ChangeNotifier {
     protocol = RadioProtocol.unknown;
     _statusSeen = false;
     status = null;
-
-    if (protocolPref == 'gnbd') {
-      protocol = RadioProtocol.gnbd;
-      _writeWithoutResponse = false;
-      for (int i = 0; i < 15 && !_statusSeen; i++) {
-        await Future.delayed(const Duration(milliseconds: 100));
-      }
-      notifyListeners();
-      return;
-    }
-    if (protocolPref == 'ats') {
-      protocol = RadioProtocol.ats;
-      _writeWithoutResponse = true;
-      for (int i = 0; i < 4 && !_statusSeen; i++) {
-        await sendBytes(const [0x74], 'probe', withoutResponse: true);
-        for (int j = 0; j < 12 && !_statusSeen; j++) {
-          await Future.delayed(const Duration(milliseconds: 100));
-        }
-      }
-      notifyListeners();
-      return;
-    }
 
     // Prefer the advertised name: it is deterministic and avoids relying on
     // the monitor toggle timing.
