@@ -35,12 +35,10 @@ class RemotePage extends StatelessWidget {
       children: [
         _deviceCard(context, connected),
         _receiverCard(context, st, connected),
-        _configCard(context, st, connected, p),
         if (ble.isAts)
           _atsRadioCard(context, st, connected, p)
         else
           _radioSettingsCard(context, st, connected, p),
-        _encoderRow(context, connected),
       ],
     );
   }
@@ -83,6 +81,20 @@ class RemotePage extends StatelessWidget {
         children: [
           const CardHead(title: 'Radio Settings', overline: 'LIVE FROM DEVICE'),
           const SizedBox(height: 14),
+          FieldBox(
+            label: 'Volume',
+            value: '${(st?.volume ?? 0).clamp(0, 63)}',
+            child: Slider(
+              min: 0,
+              max: 63,
+              divisions: 63,
+              value: (st?.volume ?? 0).clamp(0, 63).toDouble(),
+              activeColor: p.blue,
+              onChanged:
+                  connected ? (v) => ble.setVolume(v.round()) : null,
+            ),
+          ),
+          const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
@@ -255,6 +267,20 @@ class RemotePage extends StatelessWidget {
         children: [
           const CardHead(title: 'Radio Settings', overline: 'ATS MINI'),
           const SizedBox(height: 10),
+          FieldBox(
+            label: 'Volume',
+            value: '${(st?.volume ?? 0).clamp(0, 63)}',
+            child: Slider(
+              min: 0,
+              max: 63,
+              divisions: 63,
+              value: (st?.volume ?? 0).clamp(0, 63).toDouble(),
+              activeColor: p.blue,
+              onChanged:
+                  connected ? (v) => ble.setVolume(v.round()) : null,
+            ),
+          ),
+          const SizedBox(height: 10),
           step('Tuning step', st?.stepText,
               connected ? () => ble.stepCycle(-1) : null,
               connected ? () => ble.stepCycle(1) : null),
@@ -284,54 +310,6 @@ class RemotePage extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(i, size: 18, color: const Color(0xFF6B7280)),
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------- encoder row
-  Widget _encoderRow(BuildContext context, bool connected) {
-    final p = Pal(context);
-    Widget btn(IconData icon, String label, VoidCallback? onTap) => Expanded(
-          child: GestureDetector(
-            onTap: onTap,
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: p.soft2,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon,
-                      size: 20,
-                      color: connected ? p.blue : p.muted),
-                  const SizedBox(height: 5),
-                  Text(label,
-                      style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
-                          color: connected ? p.ink : p.muted)),
-                ],
-              ),
-            ),
-          ),
-        );
-
-    return CardX(
-      child: Row(
-        children: [
-          btn(Icons.rotate_left, 'LEFT',
-              connected ? () => ble.encoderRotate(-1) : null),
-          btn(Icons.rotate_right, 'RIGHT',
-              connected ? () => ble.encoderRotate(1) : null),
-          btn(Icons.touch_app, 'CLICK',
-              connected ? ble.encoderClick : null),
-          btn(Icons.pan_tool, 'HOLD',
-              connected ? ble.encoderHold : null),
-        ],
       ),
     );
   }
@@ -489,7 +467,9 @@ class RemotePage extends StatelessWidget {
                       style: const TextStyle(
                           color: Color(0xFFB8C9E4), fontSize: 11),
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 10),
+                    _manualRow(context, connected),
+                    const SizedBox(height: 14),
                     _signalRow(st),
                     const SizedBox(height: 16),
                     if (ble.isAts)
@@ -505,6 +485,52 @@ class RemotePage extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _manualRow(BuildContext context, bool connected) {
+    Widget b(IconData icon, String label, VoidCallback? onTap) => Expanded(
+          child: GestureDetector(
+            onTap: onTap,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              padding: const EdgeInsets.symmetric(vertical: 9),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon,
+                      size: 18,
+                      color: connected
+                          ? const Color(0xFF8FC0FF)
+                          : const Color(0xFF6E7C93)),
+                  const SizedBox(height: 3),
+                  Text(label,
+                      style: TextStyle(
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.4,
+                          color: connected
+                              ? const Color(0xFFB8C9E4)
+                              : const Color(0xFF6E7C93))),
+                ],
+              ),
+            ),
+          ),
+        );
+
+    return Row(
+      children: [
+        b(Icons.rotate_left, 'LEFT',
+            connected ? () => ble.encoderRotate(-1) : null),
+        b(Icons.rotate_right, 'RIGHT',
+            connected ? () => ble.encoderRotate(1) : null),
+        b(Icons.touch_app, 'CLICK', connected ? ble.encoderClick : null),
+        b(Icons.pan_tool, 'HOLD', connected ? ble.encoderHold : null),
+      ],
     );
   }
 
@@ -760,45 +786,6 @@ class RemotePage extends StatelessWidget {
   }
 
   // ------------------------------------------------------------- config
-  Widget _configCard(
-      BuildContext context, RadioStatus? st, bool connected, Pal p) {
-    final vol = (st?.volume ?? 0).clamp(0, 63);
-    return CardX(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const CardHead(title: 'Receiver Configuration', overline: 'RF / DSP'),
-          const SizedBox(height: 14),
-          FieldBox(
-            label: 'Volume',
-            value: '$vol',
-            child: SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                trackHeight: 4,
-                activeTrackColor: p.blue,
-                inactiveTrackColor: p.line,
-                thumbColor: p.blue,
-                overlayColor: Colors.transparent,
-                thumbShape:
-                    const RoundSliderThumbShape(enabledThumbRadius: 8),
-              ),
-              child: Slider(
-                min: 0,
-                max: 63,
-                divisions: 63,
-                value: vol.toDouble(),
-                onChanged: connected
-                    ? (v) => ble.setVolume(v.round())
-                    : null,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-        ],
-      ),
-    );
-  }
-
   // ------------------------------------------------------- freq editor
   Future<void> _editFrequency(BuildContext context, RadioStatus? st) async {
     if (st == null) return;

@@ -159,7 +159,7 @@ class BleController extends ChangeNotifier {
   }
 
   Future<void> _saveDevice(String id, String? name) async {
-    savedDeviceId = id;
+    savedDeviceId = UniversalBle.canonicalDeviceId(id);
     if (name != null && name.isNotEmpty) savedDeviceName = name;
     final p = await SharedPreferences.getInstance();
     await p.setString('ble_device', id);
@@ -172,7 +172,7 @@ class BleController extends ChangeNotifier {
   Future<void> autoConnect() async {
     await loadSavedDevice();
     if (savedDeviceId == null || savedDeviceId!.isEmpty) return;
-    _autoTarget = savedDeviceId;
+    _autoTarget = UniversalBle.canonicalDeviceId(savedDeviceId!);
     await startScan();
     // Give up after 15 s and fall back to manual scanning.
     Timer(const Duration(seconds: 15), () {
@@ -183,7 +183,8 @@ class BleController extends ChangeNotifier {
     });
   }
 
-  Future<void> connect(String id) async {
+  Future<void> connect(String rawId) async {
+    final id = UniversalBle.canonicalDeviceId(rawId);
     error = null;
     deviceId = id;
     deviceName = found[id] ?? savedDeviceName;
