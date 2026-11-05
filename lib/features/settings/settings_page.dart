@@ -221,6 +221,22 @@ class SettingsPage extends StatelessWidget {
                   ],
                 ),
               ),
+              const Divider(height: 20),
+              GestureDetector(
+                onTap: () => _showLog(context),
+                child: Row(
+                  children: [
+                    Icon(Icons.terminal, size: 16, color: p.blue),
+                    const SizedBox(width: 8),
+                    Text('BLE log',
+                        style: TextStyle(fontSize: 12, color: p.blue)),
+                    const Spacer(),
+                    Text('${ble.log.length}',
+                        style: TextStyle(fontSize: 11, color: p.muted)),
+                    Icon(Icons.chevron_right, size: 16, color: p.muted),
+                  ],
+                ),
+              ),
               const SizedBox(height: 14),
               Text(
                 'MIT License. ESP-IDF / NimBLE (Apache-2.0) notices are '
@@ -231,6 +247,70 @@ class SettingsPage extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  void _showLog(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (c) {
+        final p = Pal(c);
+        return Container(
+          height: MediaQuery.of(c).size.height * 0.7,
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 20),
+          decoration: BoxDecoration(
+            color: p.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: AnimatedBuilder(
+            animation: ble,
+            builder: (c, _) => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Text('BLE log',
+                        style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: p.ink)),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: ble.clearLog,
+                      child: Text('Clear',
+                          style: TextStyle(fontSize: 12, color: p.red)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Expanded(
+                  child: ble.log.isEmpty
+                      ? Center(
+                          child: Text('No entries yet',
+                              style:
+                                  TextStyle(fontSize: 12, color: p.muted)))
+                      : ListView.builder(
+                          itemCount: ble.log.length,
+                          itemBuilder: (c2, i) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            child: Text(
+                              ble.log[i],
+                              style: TextStyle(
+                                  fontSize: 10.5,
+                                  height: 1.4,
+                                  fontFamily: 'monospace',
+                                  color: p.muted),
+                            ),
+                          ),
+                        ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

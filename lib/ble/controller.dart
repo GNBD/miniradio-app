@@ -68,7 +68,6 @@ class BleController extends ChangeNotifier {
 
   /// Frequency unit preference: 0 auto, 1 kHz, 2 MHz.
   int unitMode = 0;
-
   /// Write mode negotiated during detection (ATS uses write-without-response).
   bool _writeWithoutResponse = false;
 
@@ -100,6 +99,11 @@ class BleController extends ChangeNotifier {
   void _log(String msg) {
     log.insert(0, '${DateTime.now().toIso8601String().substring(11, 19)}  $msg');
     if (log.length > 40) log.removeLast();
+  }
+
+  void clearLog() {
+    log.clear();
+    notifyListeners();
   }
 
   Future<void> startScan({bool all = false}) async {

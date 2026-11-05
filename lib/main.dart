@@ -6,6 +6,7 @@
  * miniradio companion v0.4 — ATS Mini style BLE remote.
  */
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'ble/controller.dart';
 import 'features/presets/presets_page.dart';
@@ -26,6 +27,36 @@ class _MiniradioAppState extends State<MiniradioApp> {
   ThemeMode _mode = ThemeMode.light;
 
   @override
+  void initState() {
+    super.initState();
+    _loadTheme();
+  }
+
+  Future<void> _loadTheme() async {
+    final p = await SharedPreferences.getInstance();
+    final v = p.getString('theme_mode');
+    if (v == null) return;
+    final mode = switch (v) {
+      'dark' => ThemeMode.dark,
+      'system' => ThemeMode.system,
+      _ => ThemeMode.light,
+    };
+    if (mounted) setState(() => _mode = mode);
+  }
+
+  Future<void> _setTheme(ThemeMode m) async {
+    setState(() => _mode = m);
+    final p = await SharedPreferences.getInstance();
+    await p.setString(
+        'theme_mode',
+        switch (m) {
+          ThemeMode.dark => 'dark',
+          ThemeMode.system => 'system',
+          ThemeMode.light => 'light',
+        });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Radio Control',
@@ -35,7 +66,7 @@ class _MiniradioAppState extends State<MiniradioApp> {
       themeMode: _mode,
       home: HomeShell(
         themeMode: _mode,
-        onThemeMode: (m) => setState(() => _mode = m),
+        onThemeMode: _setTheme,
       ),
     );
   }
