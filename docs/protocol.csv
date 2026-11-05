@@ -35,7 +35,7 @@ GNBD,NUS,app->dev,J,1 byte,Encoder hold,status
 GNBD,NUS,app->dev,Z,1 + 8 bytes LE (UTC seconds),Set clock directly,-
 GNBD,NUS,app->dev,z,1 + 8 bytes LE (UTC seconds),Reply to TIM time request,-
 GNBD,NUS,dev->app,TIM,3 bytes,Request phone time,clock sync
-GNBD,NUS,dev->app,status,CSV 8 fields,freq_hz / mode / band / volume / rssi / snr / battery / ble_state,-
+GNBD,NUS,dev->app,status,CSV 9 fields,freq_hz / mode / band / volume / rssi / snr / battery / ble_state / battery_mv,-
 GNBD,NUS,dev->app,SI,text,Station text (RDS PS or RT or EiBi),-
 GNBD,NUS,dev->app,PC,count,Preset list start,-
 GNBD,NUS,dev->app,P,index / freq / band / mode / name,Preset entry,-

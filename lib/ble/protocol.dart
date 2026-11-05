@@ -75,6 +75,9 @@ class RadioStatus {
   final int battery;
   final int bleState;
 
+  /// Battery voltage in volts (-1 when the firmware does not report it).
+  final double voltage;
+
   /// Raw band name from the official ATS Mini firmware (null for GNBD).
   final String? bandText;
 
@@ -96,6 +99,7 @@ class RadioStatus {
     required this.snr,
     required this.battery,
     required this.bleState,
+    this.voltage = -1,
     this.bandText,
     this.stepText,
     this.bwText,
@@ -189,6 +193,7 @@ class RadioStatus {
     if (p.length < 6) return null;
     int at(int i, [int fallback = 0]) =>
         i < p.length ? (int.tryParse(p[i].trim()) ?? fallback) : fallback;
+    final mv = at(8, -1);
     return RadioStatus(
       freqHz: at(0),
       mode: at(1),
@@ -198,6 +203,7 @@ class RadioStatus {
       snr: at(5),
       battery: at(6, -1),
       bleState: at(7, 2),
+      voltage: mv > 0 ? mv / 1000.0 : -1,
     );
   }
 
@@ -259,8 +265,9 @@ class RadioStatus {
       volume: at(9),
       rssi: at(10),
       snr: at(11),
-      battery: -1,
+      battery: at(12, -1),
       bleState: 2,
+      voltage: p.length > 13 ? (double.tryParse(p[13].trim()) ?? -1) : -1,
     );
   }
 }

@@ -178,6 +178,19 @@ class BleController extends ChangeNotifier {
     if (savedDeviceId == null || savedDeviceId!.isEmpty) return;
     _autoTarget = _normId(savedDeviceId!);
     await startScan();
+    // A firmware update can change the BLE address. If the saved id is not
+    // seen shortly, fall back to the first miniradio / ATS advertisement.
+    Timer(const Duration(seconds: 4), () {
+      if (_autoTarget == null) return;
+      for (final e in found.entries) {
+        final n = e.value.toLowerCase();
+        if (n.startsWith('miniradio') || n.startsWith('ats')) {
+          _autoTarget = null;
+          unawaited(connect(e.key));
+          return;
+        }
+      }
+    });
     // Give up after 15 s and fall back to manual scanning.
     Timer(const Duration(seconds: 15), () {
       if (_autoTarget != null) {
@@ -189,6 +202,29 @@ class BleController extends ChangeNotifier {
 
   String _normId(String id) =>
       kIsWeb ? UniversalBle.canonicalDeviceId(id) : id.toLowerCase();
+
+  Future<void> _dropStaleBond(String id) async {
+    try {
+      final paired =
+          await UniversalBle.isPaired(id).timeout(const Duration(seconds: 3));
+      if (paired == true) {
+        await UniversalBle.unpair(id).timeout(const Duration(seconds: 3));
+        _log('removed stale bond');
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _discover(String id, {bool clearCache = false}) async {
+    await UniversalBle.discoverServices(
+      id,
+      timeout: const Duration(seconds: 15),
+      platformConfig: clearCache
+          ? DiscoverServicesPlatformConfig(
+              android: AndroidDiscoverServicesOptions(clearGattCache: true))
+          : null,
+    );
+  }
 
   Future<void> connect(String rawId) async {
     final id = _normId(rawId);
@@ -202,9 +238,7 @@ class BleController extends ChangeNotifier {
     try {
       await stopScan();
       debugPrint('BLE: connecting $id');
-      try {
-        await UniversalBle.unpair(id).timeout(const Duration(seconds: 3));
-      } catch (_) {}
+      await _dropStaleBond(id);
 
       bool linked = false;
       Object? lastError;
@@ -245,26 +279,46 @@ class BleController extends ChangeNotifier {
         debugPrint('BLE: mtu skipped $e');
       }
       try {
-        await UniversalBle.discoverServices(id)
-            .timeout(const Duration(seconds: 12));
+        await _discover(id, clearCache: true);
         debugPrint('BLE: services done');
       } catch (e) {
-        // Stale GATT cache: reconnect once with a clean bond/cache.
+        // Stale bond / GATT cache left over from an older firmware build.
         debugPrint('BLE: discovery failed, retrying: $e');
+        _log('discovery retry (stale bond)');
         try {
           await UniversalBle.disconnect(id).timeout(const Duration(seconds: 4));
         } catch (_) {}
-        try {
-          await UniversalBle.unpair(id).timeout(const Duration(seconds: 3));
-        } catch (_) {}
+        await _dropStaleBond(id);
         await Future.delayed(const Duration(seconds: 2));
         await UniversalBle.connect(id).timeout(const Duration(seconds: 15));
-        await UniversalBle.discoverServices(id)
-            .timeout(const Duration(seconds: 15));
+        try {
+          await _discover(id, clearCache: true);
+        } catch (e2) {
+          debugPrint('BLE: cached discovery failed, plain retry: $e2');
+          await UniversalBle.disconnect(id).timeout(const Duration(seconds: 4));
+          await Future.delayed(const Duration(seconds: 1));
+          await UniversalBle.connect(id).timeout(const Duration(seconds: 15));
+          await _discover(id);
+        }
         debugPrint('BLE: services done (retry)');
       }
-      await UniversalBle.subscribeNotifications(id, Nus.service, Nus.tx)
+      Future<void> subscribe() => UniversalBle.subscribeNotifications(
+            id, Nus.service, Nus.tx)
           .timeout(const Duration(seconds: 10));
+      try {
+        await subscribe();
+      } catch (e) {
+        // The cached GATT table can be partial (no NUS TX). Refresh it.
+        debugPrint('BLE: subscribe failed, refreshing GATT: $e');
+        _log('GATT refresh (characteristic)');
+        try {
+          await UniversalBle.disconnect(id).timeout(const Duration(seconds: 4));
+        } catch (_) {}
+        await Future.delayed(const Duration(seconds: 1));
+        await UniversalBle.connect(id).timeout(const Duration(seconds: 15));
+        await _discover(id, clearCache: true);
+        await subscribe();
+      }
       debugPrint('BLE: subscribed');
       _log('notify subscribed');
       _set(LinkState.connected);
@@ -652,7 +706,14 @@ class BleController extends ChangeNotifier {
     if (protocol == RadioProtocol.ats) return false;
     if (RadioStatus.isAtsMonitor(t)) return true;
     final p = t.split(',');
-    if (p.length == 8 && int.tryParse(p[0].trim()) != null) return true; // GNBD status
+    // GNBD status: freq,mode,band,vol,rssi,snr,batt,ble[,mv...]
+    // Only the first three fields identify it; extra fields are future-safe.
+    if (p.length >= 6 &&
+        int.tryParse(p[0].trim()) != null &&
+        int.tryParse(p[1].trim()) != null &&
+        int.tryParse(p[2].trim()) != null) {
+      return true;
+    }
     for (final pre in const [
       'PC,', 'P,', 'N,', 'PE', 'SI,', 'BRQ,', '#', 'TIM',
       'RSTEP,', 'RBW,', 'RAGC,', 'RSQ,', 'RRDS,', 'RSTE,', 'RDE,', 'RMODE,',
@@ -855,7 +916,8 @@ class BleController extends ChangeNotifier {
           old.bwText != st.bwText ||
           old.agcIdx != st.agcIdx ||
           old.volume != st.volume ||
-          old.battery != st.battery;
+          old.battery != st.battery ||
+          old.voltage != st.voltage;
       status = st;
       if (!coreChanged && (nowMs - _lastStatusMs) < 500) {
         return;                       // 신호값만 변할 때는 0.5s 스로틀

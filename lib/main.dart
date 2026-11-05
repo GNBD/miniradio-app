@@ -162,7 +162,7 @@ class _HomeShellState extends State<HomeShell> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Mini Control',
+                Text('MINI Control',
                     style: TextStyle(
                         fontSize: 27,
                         letterSpacing: -0.8,
