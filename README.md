@@ -42,7 +42,8 @@ The Windows target is kept for development; build with
 - RX `6E400002-...` (central writes)
 - TX `6E400003-...` (notify)
 
-See `lib/ble/protocol.dart` for commands.
+See `lib/ble/protocol.dart` for commands and `docs/protocol.csv` for the full
+command/telemetry reference (GNBD, bridge, ATS Mini).
 
 ## License
 

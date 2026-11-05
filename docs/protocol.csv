@@ -1,0 +1,80 @@
+protocol,transport,direction,command,payload,description,response
+common,BLE NUS,meta,service,6E400001-B5A3-F393-E0A9-E50E24DCCA9E,Service UUID,-
+common,BLE NUS,meta,rx_char,6E400002-B5A3-F393-E0A9-E50E24DCCA9E,Central to device (write),-
+common,BLE NUS,meta,tx_char,6E400003-B5A3-F393-E0A9-E50E24DCCA9E,Device to central (notify),-
+common,BLE NUS,meta,device_name,miniradio,GNBD advertising name,-
+common,BLE NUS,meta,mode_gnbd,write with response,GNBD RX characteristic requires response,-
+common,BLE NUS,meta,mode_ats,write without response,ATS Mini RX characteristic is WRITE_NR,-
+GNBD,NUS,app->dev,U,1 byte,Tune up one step,status
+GNBD,NUS,app->dev,D,1 byte,Tune down one step,status
+GNBD,NUS,app->dev,u,1 byte,Next band,status
+GNBD,NUS,app->dev,d,1 byte,Previous band,status
+GNBD,NUS,app->dev,M,1 byte,Next demodulation mode,status
+GNBD,NUS,app->dev,+,1 byte,Volume +1,status
+GNBD,NUS,app->dev,-,1 byte,Volume -1,status
+GNBD,NUS,app->dev,S,1 byte,Seek up,status
+GNBD,NUS,app->dev,s,1 byte,Seek down,status
+GNBD,NUS,app->dev,P,1 byte,Next preset,status
+GNBD,NUS,app->dev,W,1 byte,Cycle Wi-Fi mode,status
+GNBD,NUS,app->dev,Q,1 byte,Query status,status
+GNBD,NUS,app->dev,L,1 byte,Request preset list,PC/P/N/PE
+GNBD,NUS,app->dev,T,1 + 1 byte (index),Tune preset by index,status
+GNBD,NUS,app->dev,K,1 byte,Save current frequency as preset,PC/P/N/PE
+GNBD,NUS,app->dev,X,1 + 1 byte (index),Delete preset,PC/P/N/PE
+GNBD,NUS,app->dev,F,1 + 4 bytes LE (Hz),Set absolute frequency,status
+GNBD,NUS,app->dev,V,1 + 1 byte (0-63),Set absolute volume,status
+GNBD,NUS,app->dev,O,1 + 1 byte (mode),Set absolute demodulation mode,status
+GNBD,NUS,app->dev,B,1 + 1 byte (band index),Set absolute band,status
+GNBD,NUS,app->dev,c,1 + 2 bytes (item;value),Write radio setting,settings snapshot
+GNBD,NUS,app->dev,g,1 byte,Read radio settings snapshot,RSTEP/RBW/RAGC/RSQ/RRDS/RSTE/RDE/RMODE
+GNBD,NUS,app->dev,n,1 + 1 byte (0/1),Network bridge enable,-
+GNBD,NUS,app->dev,y,1 byte,Encoder rotate CCW,status
+GNBD,NUS,app->dev,Y,1 byte,Encoder rotate CW,status
+GNBD,NUS,app->dev,j,1 byte,Encoder click,status
+GNBD,NUS,app->dev,J,1 byte,Encoder hold,status
+GNBD,NUS,app->dev,Z,1 + 8 bytes LE (UTC seconds),Set clock directly,-
+GNBD,NUS,app->dev,z,1 + 8 bytes LE (UTC seconds),Reply to TIM time request,-
+GNBD,NUS,dev->app,TIM,3 bytes,Request phone time,clock sync
+GNBD,NUS,dev->app,status,CSV 8 fields,freq_hz / mode / band / volume / rssi / snr / battery / ble_state,-
+GNBD,NUS,dev->app,SI,text,Station text (RDS PS or RT or EiBi),-
+GNBD,NUS,dev->app,PC,count,Preset list start,-
+GNBD,NUS,dev->app,P,index / freq / band / mode / name,Preset entry,-
+GNBD,NUS,dev->app,N,index / name,Preset name (fallback path),-
+GNBD,NUS,dev->app,PE,2 bytes,Preset list end,-
+GNBD,NUS,dev->app,RSTEP,sel / count / hz values,Tuning step options,-
+GNBD,NUS,dev->app,RBW,sel / count / labels,Bandwidth options,-
+GNBD,NUS,dev->app,RAGC,sel / max,AGC option,-
+GNBD,NUS,dev->app,RSQ,sel,Squelch value,-
+GNBD,NUS,dev->app,RRDS,sel,RDS option (0 on / 1 off),-
+GNBD,NUS,dev->app,RSTE,sel,Stereo option,-
+GNBD,NUS,dev->app,RDE,sel,De-emphasis option,-
+GNBD,NUS,dev->app,RMODE,mode / fm_band_flag,Mode and FM-band flag,-
+bridge,NUS,dev->app,BRQ,id / url,HTTP request for phone to perform,-
+bridge,NUS,app->dev,d,id / len16 / data (binary),Response body chunk,-
+bridge,NUS,app->dev,e,id / status,Response complete (0=OK),-
+ATS,NUS,app->dev,R,1 byte,Encoder up (tune/menu),monitor
+ATS,NUS,app->dev,r,1 byte,Encoder down,monitor
+ATS,NUS,app->dev,e,1 byte,Encoder click,monitor
+ATS,NUS,app->dev,E,1 byte,Encoder short press / hold,monitor
+ATS,NUS,app->dev,V,1 byte,Volume up,monitor
+ATS,NUS,app->dev,v,1 byte,Volume down,monitor
+ATS,NUS,app->dev,B,1 byte,Next band,monitor
+ATS,NUS,app->dev,b,1 byte,Previous band,monitor
+ATS,NUS,app->dev,M,1 byte,Next mode,monitor
+ATS,NUS,app->dev,m,1 byte,Previous mode,monitor
+ATS,NUS,app->dev,S,1 byte,Next tuning step,monitor
+ATS,NUS,app->dev,s,1 byte,Previous tuning step,monitor
+ATS,NUS,app->dev,W,1 byte,Next bandwidth,monitor
+ATS,NUS,app->dev,w,1 byte,Previous bandwidth,monitor
+ATS,NUS,app->dev,A,1 byte,AGC/attenuator up,monitor
+ATS,NUS,app->dev,a,1 byte,AGC/attenuator down,monitor
+ATS,NUS,app->dev,L,1 byte,Backlight up,monitor
+ATS,NUS,app->dev,l,1 byte,Backlight down,monitor
+ATS,NUS,app->dev,O,1 byte,Sleep on,monitor
+ATS,NUS,app->dev,o,1 byte,Sleep off,monitor
+ATS,NUS,app->dev,t,1 byte,Toggle monitor stream,monitor
+ATS,NUS,app->dev,F,ASCII digits + CR,Set frequency in Hz,monitor
+ATS,NUS,app->dev,#,slot / band / freq / mode / name + CR,Set memory slot (freq 0 clears),monitor
+ATS,NUS,app->dev,$,1 byte,List memory slots,#NN lines
+ATS,NUS,dev->app,monitor,CSV 15 fields,ver / freq / bfo / bandcal / band / mode / step / bw / agc / vol / rssi / snr / cap / volt / seq,-
+ATS,NUS,dev->app,memory,#NN / band / freq / mode / name,Memory slot listing,-
