@@ -110,10 +110,48 @@ class RadioStatus {
     '20m', '17m', '15m', '12m', '10m', 'CB',
   ];
 
+  bool get isMeterBand {
+    final b = bandText;
+    if (b == null) return band >= 4;
+    return RegExp(r'^\d+M$').hasMatch(b.toUpperCase());
+  }
+
   /// Display unit per band (VHF/ham = MHz, MW/LW/SW = kHz).
   bool get useMhz => rawUnit != null
       ? rawUnit == 'MHz'
       : (bandText != null ? (freqHz >= 1000000) : (band == 0 || band >= 4));
+
+  static String _fmtMhz(int hz) {
+    var s = (hz / 1000000).toStringAsFixed(3);
+    while (s.endsWith('0') && s.split('.').last.length > 1) {
+      s = s.substring(0, s.length - 1);
+    }
+    return s;
+  }
+
+  static String _fmtKhz(int hz) => (hz / 1000).toStringAsFixed(0);
+
+  /// Unit preference: 0 = auto, 1 = kHz, 2 = MHz.
+  String labelFor(int pref) {
+    if (pref == 1) return _fmtKhz(freqHz);
+    if (pref == 2) return _fmtMhz(freqHz);
+    if (isMeterBand) return _fmtMhz(freqHz);
+    return freqLabel;
+  }
+
+  String unitFor(int pref) {
+    if (pref == 1) return 'kHz';
+    if (pref == 2) return 'MHz';
+    if (isMeterBand) return 'MHz';
+    return unitLabel;
+  }
+
+  String textFor(int pref) {
+    if (pref == 1) return _fmtKhz(freqHz);
+    if (pref == 2) return _fmtMhz(freqHz);
+    if (isMeterBand) return _fmtMhz(freqHz);
+    return freqText;
+  }
 
   String get modeName =>
       (mode >= 0 && mode < modeNames.length) ? modeNames[mode] : '?';

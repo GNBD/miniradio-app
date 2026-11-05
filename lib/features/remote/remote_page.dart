@@ -145,8 +145,8 @@ class RemotePage extends StatelessWidget {
 
   // ----------------------------------------------------------- receiver
   Widget _receiverCard(BuildContext context, RadioStatus? st, bool connected) {
-    final freq = st?.freqLabel ?? '---.---';
-    final unit = st?.unitLabel ?? 'MHz';
+    final freq = st?.labelFor(ble.unitMode) ?? '---.---';
+    final unit = st?.unitFor(ble.unitMode) ?? 'MHz';
     final mode = st?.modeName ?? 'FM';
     final useMhz = st?.useMhz ?? true;
 
@@ -555,7 +555,7 @@ class RemotePage extends StatelessWidget {
   // ------------------------------------------------------- freq editor
   Future<void> _editFrequency(BuildContext context, RadioStatus? st) async {
     if (st == null) return;
-    final ctrl = TextEditingController(text: st.freqText);
+    final ctrl = TextEditingController(text: st.textFor(ble.unitMode));
     final result = await showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
@@ -582,7 +582,7 @@ class RemotePage extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                         color: p.ink)),
                 const SizedBox(height: 4),
-                Text('${st.bandName} band · ${st.unitLabel}',
+                Text('${st.bandName} band · ${st.unitFor(ble.unitMode)}',
                     style: TextStyle(fontSize: 11, color: p.muted)),
                 const SizedBox(height: 16),
                 TextField(
@@ -598,7 +598,7 @@ class RemotePage extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                       color: p.ink),
                   decoration: InputDecoration(
-                    suffixText: st.unitLabel,
+                    suffixText: st.unitFor(ble.unitMode),
                     filled: true,
                     fillColor: p.soft,
                     border: OutlineInputBorder(
@@ -631,7 +631,7 @@ class RemotePage extends StatelessWidget {
                           final v =
                               double.tryParse(ctrl.text.trim());
                           if (v == null || v <= 0) return;
-                          final hz = st.useMhz
+                          final hz = st.unitFor(ble.unitMode) == 'MHz'
                               ? (v * 1000000).round()
                               : (v * 1000).round();
                           Navigator.pop(c, hz);

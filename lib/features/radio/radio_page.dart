@@ -293,7 +293,9 @@ class RadioPage extends StatelessWidget {
               const CardHead(title: 'Status', overline: 'MONITOR'),
               const SizedBox(height: 10),
               _kv(p, 'Frequency',
-                  st == null ? '—' : '${st.freqLabel} ${st.unitLabel}'),
+                  st == null
+                      ? '—'
+                      : '${st.labelFor(ble.unitMode)} ${st.unitFor(ble.unitMode)}'),
               const SizedBox(height: 8),
               _kv(p, 'Mode / Band',
                   st == null ? '—' : '${st.modeName} · ${st.bandName}'),

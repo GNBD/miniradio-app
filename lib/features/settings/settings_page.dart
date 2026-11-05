@@ -60,6 +60,16 @@ class SettingsPage extends StatelessWidget {
                   }),
                 ),
               ),
+              const SizedBox(height: 10),
+              FieldBox(
+                label: 'Frequency unit',
+                value: const ['AUTO', 'kHz', 'MHz'][ble.unitMode.clamp(0, 2)],
+                child: _Segmented(
+                  options: const ['Auto', 'kHz', 'MHz'],
+                  selected: ble.unitMode.clamp(0, 2),
+                  onSelect: (i) => ble.setUnitMode(i),
+                ),
+              ),
             ],
           ),
         ),

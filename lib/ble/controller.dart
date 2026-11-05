@@ -66,6 +66,9 @@ class BleController extends ChangeNotifier {
   String? savedDeviceName;
   String? _autoTarget;
 
+  /// Frequency unit preference: 0 auto, 1 kHz, 2 MHz.
+  int unitMode = 0;
+
   /// Write mode negotiated during detection (ATS uses write-without-response).
   bool _writeWithoutResponse = false;
 
@@ -145,6 +148,14 @@ class BleController extends ChangeNotifier {
     final p = await SharedPreferences.getInstance();
     savedDeviceId = p.getString('ble_device');
     savedDeviceName = p.getString('ble_device_name');
+    unitMode = p.getInt('freq_unit') ?? 0;
+  }
+
+  Future<void> setUnitMode(int mode) async {
+    unitMode = mode;
+    final p = await SharedPreferences.getInstance();
+    await p.setInt('freq_unit', mode);
+    notifyListeners();
   }
 
   Future<void> _saveDevice(String id, String? name) async {
