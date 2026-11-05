@@ -193,12 +193,44 @@ class BleController extends ChangeNotifier {
       await stopScan();
       debugPrint('BLE: connecting $id');
       try {
+        await UniversalBle.disconnect(id)
+            .timeout(const Duration(seconds: 3));
+      } catch (_) {}
+      try {
         await UniversalBle.unpair(id)
             .timeout(const Duration(seconds: 3));
         debugPrint('BLE: old bond cleared');
       } catch (_) {}
-      await UniversalBle.connect(id)
-          .timeout(const Duration(seconds: 20));
+
+      bool linked = false;
+      Object? lastError;
+      for (int attempt = 0; attempt < 3 && !linked; attempt++) {
+        try {
+          await UniversalBle.connect(id)
+              .timeout(const Duration(seconds: 15));
+          linked = true;
+        } catch (e) {
+          lastError = e;
+          debugPrint('BLE: connect attempt $attempt failed: $e');
+          if (attempt == 2) break;
+          // The radio may still be finishing the previous link teardown and
+          // not advertising yet; rescan and retry.
+          try {
+            await UniversalBle.startScan(
+              scanFilter:
+                  ScanFilter(withNamePrefix: const ['miniradio', 'ATS']),
+              skipDuplicates: true,
+            );
+          } catch (_) {}
+          await Future.delayed(const Duration(seconds: 3));
+          try {
+            await UniversalBle.stopScan();
+          } catch (_) {}
+        }
+      }
+      if (!linked) {
+        throw lastError ?? Exception('connect failed');
+      }
       _log('connected: $id');
       await _saveDevice(id, deviceName);
       try {
