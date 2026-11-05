@@ -484,11 +484,7 @@ class RemotePage extends StatelessWidget {
         );
 
     void nudge(int dir) {
-      final st = ble.status;
-      if (st == null) return;
-      var next = st.freqHz + dir * _stepHz;
-      if (next < 0) next = 0;
-      ble.setFrequency(next);
+      ble.tuneStep(dir);
     }
 
     return Row(

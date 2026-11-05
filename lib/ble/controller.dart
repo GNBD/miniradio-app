@@ -77,7 +77,9 @@ class BleController extends ChangeNotifier {
       if (!isAts || state != LinkState.connected) return;
       final nowMs = DateTime.now().millisecondsSinceEpoch;
       if (nowMs - _lastStatusMs > 4000) {
-        // Monitor stream stopped; the toggle may have been off. Re-arm it.
+        // Recover from a stuck ad hoc command first, then re-arm the monitor.
+        await sendRaw('\r', 'resync');
+        await Future.delayed(const Duration(milliseconds: 150));
         await sendRaw(AtsCmd.monitorToggle, 'monitor rearm');
       }
     });
@@ -336,8 +338,16 @@ class BleController extends ChangeNotifier {
     await sendBytes(Cmd.setBand(idx), 'B$idx');
   }
 
-  Future<void> bandStep(int dir) async {
+  /// One tuning step (native step of the connected firmware).
+  Future<void> tuneStep(int dir) async {
     if (isAts) {
+      await sendRaw(dir > 0 ? AtsCmd.encUp : AtsCmd.encDown, 'tune');
+      return;
+    }
+    await sendRaw(dir > 0 ? 'U' : 'D', dir > 0 ? 'U' : 'D');
+  }
+
+  Future<void> bandStep(int dir) async {    if (isAts) {
       await sendRaw(dir > 0 ? AtsCmd.bandNext : AtsCmd.bandPrev, 'band');
       return;
     }
