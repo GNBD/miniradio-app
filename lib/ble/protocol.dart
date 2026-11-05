@@ -131,13 +131,17 @@ class RadioStatus {
 
   static String _fmtKhz(int hz) => (hz / 1000).toStringAsFixed(0);
 
+  static String _fmtKhz2(int hz) => (hz / 1000).toStringAsFixed(2);
+
+  bool get _isSsb => mode == 2 || mode == 3;
+
   /// Unit preference: 0 = auto, 1 = kHz, 2 = MHz.
   /// Auto shows FM in MHz and every other band (MW/LW/SW/SSB meters) in kHz.
   String labelFor(int pref) {
-    if (pref == 1) return _fmtKhz(freqHz);
     if (pref == 2) return _fmtMhz(freqHz);
+    if (pref == 1) return _isSsb ? _fmtKhz2(freqHz) : _fmtKhz(freqHz);
     if (mode == 0) return _fmtMhz(freqHz);
-    return _fmtKhz(freqHz);
+    return _isSsb ? _fmtKhz2(freqHz) : _fmtKhz(freqHz);
   }
 
   String unitFor(int pref) {
@@ -148,10 +152,10 @@ class RadioStatus {
   }
 
   String textFor(int pref) {
-    if (pref == 1) return _fmtKhz(freqHz);
     if (pref == 2) return _fmtMhz(freqHz);
+    if (pref == 1) return _isSsb ? _fmtKhz2(freqHz) : _fmtKhz(freqHz);
     if (mode == 0) return _fmtMhz(freqHz);
-    return _fmtKhz(freqHz);
+    return _isSsb ? _fmtKhz2(freqHz) : _fmtKhz(freqHz);
   }
 
   String get modeName =>
