@@ -65,6 +65,9 @@ class BleController extends ChangeNotifier {
   String? savedDeviceId;
   String? _autoTarget;
 
+  /// Manual protocol override: 'auto' | 'gnbd' | 'ats'.
+  String protocolPref = 'auto';
+
   void _set(LinkState s) {
     state = s;
     notifyListeners();
@@ -120,6 +123,7 @@ class BleController extends ChangeNotifier {
   Future<void> loadSavedDevice() async {
     final p = await SharedPreferences.getInstance();
     savedDeviceId = p.getString('ble_device');
+    protocolPref = p.getString('radio_protocol') ?? 'auto';
   }
 
   Future<void> _saveDevice(String id) async {
@@ -200,20 +204,52 @@ class BleController extends ChangeNotifier {
     _set(LinkState.idle);
   }
 
-  /// Send the official monitor toggle ('t'). The GNBD firmware ignores it,
-  /// while ATS Mini starts streaming its monitor CSV.
+  /// Auto-detect the firmware protocol.
+  ///
+  /// Sends the official monitor toggle ('t') a few times (it is also a toggle,
+  /// so retrying covers the "was already on" case). The GNBD firmware ignores
+  /// it and streams its own status within ~1 s.
   Future<void> _detectProtocol() async {
     protocol = RadioProtocol.unknown;
     _statusSeen = false;
     status = null;
-    await sendRaw(AtsCmd.monitorToggle, 'probe');
-    for (int i = 0; i < 25 && !_statusSeen; i++) {
-      await Future.delayed(const Duration(milliseconds: 100));
+
+    if (protocolPref == 'gnbd') {
+      protocol = RadioProtocol.gnbd;
+      return;
+    }
+    if (protocolPref == 'ats') {
+      protocol = RadioProtocol.ats;
+      await sendRaw(AtsCmd.monitorToggle, 'monitor');
+      return;
+    }
+
+    for (int attempt = 0; attempt < 3 && !_statusSeen; attempt++) {
+      await sendRaw(AtsCmd.monitorToggle, 'probe');
+      for (int i = 0; i < 12 && !_statusSeen; i++) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
     }
     if (protocol == RadioProtocol.unknown) {
       protocol = RadioProtocol.gnbd;
     }
     debugPrint('BLE protocol: $protocol');
+    notifyListeners();
+  }
+
+  Future<void> setProtocolPref(String value) async {
+    protocolPref = value;
+    final p = await SharedPreferences.getInstance();
+    await p.setString('radio_protocol', value);
+    if (state == LinkState.connected) {
+      await _detectProtocol();
+      if (isGnbd) {
+        await send(Cmd.query);
+        await send(Cmd.presetList);
+        await send(Cmd.getSettings);
+        await setBridgeEnabled(bridgeEnabled);
+      }
+    }
     notifyListeners();
   }
 

@@ -81,7 +81,7 @@ class RemotePage extends StatelessWidget {
               Expanded(
                 child: Text(
                   connected
-                      ? 'Connected · BLE GATT'
+                      ? 'Connected · ${ble.isAts ? 'ATS Mini' : ble.isGnbd ? 'GNBD' : 'detecting…'}'
                       : 'Not connected · tap Connect',
                   style: TextStyle(fontSize: 11.5, color: p.muted),
                 ),
@@ -150,8 +150,6 @@ class RemotePage extends StatelessWidget {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        const Spacer(),
-                        _powerDot(connected),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -219,20 +217,6 @@ class RemotePage extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _powerDot(bool on) {
-    return Container(
-      width: 30,
-      height: 30,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.09),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Icon(Icons.power_settings_new,
-          size: 16,
-          color: on ? const Color(0xFF68A7FF) : const Color(0xFF7C8AA5)),
     );
   }
 
