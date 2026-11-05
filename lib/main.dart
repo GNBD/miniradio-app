@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 
 import 'ble/controller.dart';
 import 'features/presets/presets_page.dart';
-import 'features/radio/radio_page.dart';
 import 'features/remote/remote_page.dart';
 import 'features/settings/settings_page.dart';
 import 'core/ui.dart';
@@ -87,7 +86,6 @@ class _HomeShellState extends State<HomeShell> {
         onConnectTap: _openConnectionSheet,
       ),
       PresetsPage(ble: ble),
-      RadioPage(ble: ble),
       SettingsPage(
         ble: ble,
         themeMode: widget.themeMode,
@@ -202,7 +200,6 @@ class _HomeShellState extends State<HomeShell> {
     const items = [
       ('◉', 'Remote'),
       ('☆', 'Presets'),
-      ('⌁', 'Radio'),
       ('⚙', 'Settings'),
     ];
     return SafeArea(
