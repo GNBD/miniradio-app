@@ -124,7 +124,7 @@ class RemotePage extends StatelessWidget {
               Expanded(
                 child: Text(
                   connected
-                      ? 'Connected · ${ble.isAts ? 'ATS Mini' : ble.isGnbd ? 'GNBD' : 'detecting…'}'
+                      ? 'Connected'
                       : 'Not connected · tap Connect',
                   style: TextStyle(fontSize: 11.5, color: p.muted),
                 ),
@@ -236,11 +236,7 @@ class RemotePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      ble.station.isNotEmpty
-                          ? ble.station
-                          : (connected
-                              ? 'Tap the frequency to type it directly'
-                              : 'Receiver ready · connect to control'),
+                      ble.station.isNotEmpty ? ble.station : ' ',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(

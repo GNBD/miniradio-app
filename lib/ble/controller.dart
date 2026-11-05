@@ -66,6 +66,9 @@ class BleController extends ChangeNotifier {
   String? savedDeviceName;
   String? _autoTarget;
 
+  /// Manual protocol override: 'auto' | 'gnbd' | 'ats'.
+  String protocolPref = 'auto';
+
   /// Write mode negotiated during detection (ATS uses write-without-response).
   bool _writeWithoutResponse = false;
 
@@ -145,6 +148,27 @@ class BleController extends ChangeNotifier {
     final p = await SharedPreferences.getInstance();
     savedDeviceId = p.getString('ble_device');
     savedDeviceName = p.getString('ble_device_name');
+    protocolPref = p.getString('radio_protocol') ?? 'auto';
+  }
+
+  Future<void> setProtocolPref(String value) async {
+    protocolPref = value;
+    final p = await SharedPreferences.getInstance();
+    await p.setString('radio_protocol', value);
+    if (state == LinkState.connected) {
+      _stopWatchdog();
+      await _detectProtocol();
+      if (isGnbd) {
+        await send(Cmd.query);
+        await send(Cmd.presetList);
+        await send(Cmd.getSettings);
+        await setBridgeEnabled(bridgeEnabled);
+      } else if (isAts) {
+        await loadPresets();
+        _startWatchdog();
+      }
+    }
+    notifyListeners();
   }
 
   Future<void> _saveDevice(String id, String? name) async {
@@ -242,6 +266,28 @@ class BleController extends ChangeNotifier {
     protocol = RadioProtocol.unknown;
     _statusSeen = false;
     status = null;
+
+    if (protocolPref == 'gnbd') {
+      protocol = RadioProtocol.gnbd;
+      _writeWithoutResponse = false;
+      for (int i = 0; i < 15 && !_statusSeen; i++) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      notifyListeners();
+      return;
+    }
+    if (protocolPref == 'ats') {
+      protocol = RadioProtocol.ats;
+      _writeWithoutResponse = true;
+      for (int i = 0; i < 4 && !_statusSeen; i++) {
+        await sendBytes(const [0x74], 'probe', withoutResponse: true);
+        for (int j = 0; j < 12 && !_statusSeen; j++) {
+          await Future.delayed(const Duration(milliseconds: 100));
+        }
+      }
+      notifyListeners();
+      return;
+    }
 
     // Prefer the advertised name: it is deterministic and avoids relying on
     // the monitor toggle timing.
@@ -570,24 +616,41 @@ class BleController extends ChangeNotifier {
 
   String _rxPending = '';
 
+  bool _looksStandalone(String t) {
+    if (protocol == RadioProtocol.ats) return false;
+    if (RadioStatus.isAtsMonitor(t)) return true;
+    final p = t.split(',');
+    if (p.length == 8 && int.tryParse(p[0].trim()) != null) return true; // GNBD status
+    for (final pre in const [
+      'PC,', 'P,', 'N,', 'PE', 'SI,', 'BRQ,', '#',
+      'RSTEP,', 'RBW,', 'RAGC,', 'RSQ,', 'RRDS,', 'RSTE,', 'RDE,', 'RMODE,',
+    ]) {
+      if (t.startsWith(pre)) return true;
+    }
+    return false;
+  }
+
   void _onValue(BleCharacteristicValue v) {
     if (v.characteristicId.toUpperCase() != Nus.tx.toUpperCase()) return;
     final text = utf8.decode(v.value, allowMalformed: true);
     debugPrint('BLE RX: ${text.trim()}');
+    _rxPending += text;
 
-    // The official firmware terminates every line with CRLF, while the GNBD
-    // firmware sends one unframed line per notification.
-    if (text.contains('\n')) {
-      _rxPending += text;
-      final parts = _rxPending.split('\n');
-      _rxPending = parts.removeLast();
-      for (final line in parts) {
-        final t = line.trim();
-        if (t.isNotEmpty) _handleRxText(t);
-      }
-    } else {
-      final t = text.trim();
-      if (t.isNotEmpty) _handleRxText(t);
+    // Complete CRLF terminated lines (official ATS Mini monitor).
+    for (;;) {
+      final idx = _rxPending.indexOf('\n');
+      if (idx < 0) break;
+      final line = _rxPending.substring(0, idx).trim();
+      _rxPending = _rxPending.substring(idx + 1);
+      if (line.isNotEmpty) _handleRxText(line);
+    }
+
+    // The GNBD firmware sends unframed one-line messages; the ATS monitor can
+    // also arrive as a single complete line when the MTU is large enough.
+    final rest = _rxPending.trim();
+    if (rest.isNotEmpty && _looksStandalone(rest)) {
+      _rxPending = '';
+      _handleRxText(rest);
     }
   }
 
@@ -619,6 +682,8 @@ class BleController extends ChangeNotifier {
         final nowMs = DateTime.now().millisecondsSinceEpoch;
         status = st;
         _lastStatusMs = nowMs;
+        debugPrint('BLE ATS ${st.freqHz} ${st.bandName} ${st.modeName} '
+            'v${st.volume} rssi${st.rssi}');
         notifyListeners();
       }
       return;

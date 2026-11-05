@@ -60,6 +60,21 @@ class SettingsPage extends StatelessWidget {
                   }),
                 ),
               ),
+              const SizedBox(height: 10),
+              FieldBox(
+                label: 'Radio firmware',
+                value: ble.protocolPref.toUpperCase(),
+                child: _Segmented(
+                  options: const ['Auto', 'GNBD', 'ATS Mini'],
+                  selected: switch (ble.protocolPref) {
+                    'gnbd' => 1,
+                    'ats' => 2,
+                    _ => 0,
+                  },
+                  onSelect: (i) => ble.setProtocolPref(
+                      const ['auto', 'gnbd', 'ats'][i]),
+                ),
+              ),
             ],
           ),
         ),
