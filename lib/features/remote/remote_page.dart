@@ -85,6 +85,7 @@ class RemotePage extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
+                    flex: 3,
                     child: FieldBox(
                       label: 'Mode',
                       child: dd<int>(
@@ -99,9 +100,9 @@ class RemotePage extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
+                    flex: 4,
                     child: FieldBox(
                       label: 'Step',
-                      value: rs.stepLabel,
                       child: dd<int>(
                         rs.stepSel.clamp(0,
                             rs.stepHz.isEmpty ? 0 : rs.stepHz.length - 1),
@@ -110,7 +111,7 @@ class RemotePage extends StatelessWidget {
                             (
                               i,
                               i == 0
-                                  ? 'BAND DEFAULT'
+                                  ? 'BAND'
                                   : (rs.stepHz[i] >= 1000 &&
                                           rs.stepHz[i] % 1000 == 0
                                       ? '${rs.stepHz[i] ~/ 1000} kHz'
@@ -125,9 +126,9 @@ class RemotePage extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
+                    flex: 4,
                     child: FieldBox(
                       label: 'Bandwidth',
-                      value: rs.bwLabel,
                       child: dd<int>(
                         rs.bwSel.clamp(0,
                             rs.bwLabels.isEmpty ? 0 : rs.bwLabels.length - 1),
