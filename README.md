@@ -48,6 +48,17 @@ flutter build apk --release \
 Prebuilt APKs are in `release/`:
 `miniradio-0.1.0-beta-arm64.apk`, `-armv7.apk`, `-arm-universal.apk`.
 
+Windows x64 release: `MINI-Control-0.1.0-beta-windows-x64.zip`
+(extract and run `miniradio_companion.exe`).
+
+## Downloads
+
+GitHub release `v0.1.0-beta` ships:
+
+- `miniradio-0.1.0-beta-arm-universal.apk` — universal ARM APK
+- `miniradio-0.1.0-beta-arm64.apk` / `-armv7.apk` — per-ABI APKs
+- `MINI-Control-0.1.0-beta-windows-x64.zip` — Windows x64 build
+
 Release signing uses `android/key.properties` (not committed). Copy
 `android/key.properties.example` and point it at your own keystore.
 
