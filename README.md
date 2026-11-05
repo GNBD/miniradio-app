@@ -3,7 +3,7 @@
 ⚠️This app is currently in the testing phase. The developer assumes no responsibility for any security issues, data loss, malfunctions, or other damages that may occur during use.
 
 
-Android (and Windows) companion app for the GNBD ATS Mini / miniradio receiver.
+Android companion app for the GNBD ATS Mini / miniradio receiver.
 
 Controls the radio over Bluetooth LE using the Nordic UART Service (NUS) and can
 act as a network bridge: when the radio has no Wi-Fi, the phone fetches
