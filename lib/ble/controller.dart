@@ -272,8 +272,16 @@ class BleController extends ChangeNotifier {
   }
 
   Future<void> setBand(int idx) async {
-    if (isAts) return; // band cycling differs; use the keypad/encoder on device
+    if (isAts) return; // band cycling differs; use bandStep()
     await sendBytes(Cmd.setBand(idx), 'B$idx');
+  }
+
+  Future<void> bandStep(int dir) async {
+    if (isAts) {
+      await sendRaw(dir > 0 ? AtsCmd.bandNext : AtsCmd.bandPrev, 'band');
+      return;
+    }
+    await send(dir > 0 ? Cmd.bandUp : Cmd.bandDown);
   }
 
   Future<void> setMode(int idx) async {
@@ -290,22 +298,63 @@ class BleController extends ChangeNotifier {
   }
 
   Future<void> loadPresets() async {
-    if (isAts) return;
+    if (isAts) {
+      presets.clear();
+      notifyListeners();
+      await sendRaw(r'$', 'mem list');
+      return;
+    }
     await send(Cmd.presetList);
   }
 
   Future<void> savePreset() async {
-    if (isAts) return;
+    if (isAts) {
+      final st = status;
+      if (st == null) return;
+      final slot = presets.length + 1;
+      final band = st.bandText ?? st.bandName;
+      final frame =
+          '#${slot.toString().padLeft(2, '0')},$band,${st.freqHz},${st.modeName},\r';
+      await sendRaw(frame, 'mem save');
+      await Future.delayed(const Duration(milliseconds: 400));
+      await loadPresets();
+      return;
+    }
     await send(Cmd.presetSave);
   }
 
   Future<void> tunePreset(int idx) async {
-    if (isAts) return;
+    if (isAts) {
+      if (idx < 0 || idx >= presets.length) return;
+      final p = presets[idx];
+      await _atsSelectBand(p.bandLabel);
+      await setFrequency(p.freqHz);
+      return;
+    }
     await sendBytes(Cmd.presetTune(idx), 'T$idx');
   }
 
+  Future<void> _atsSelectBand(String target) async {
+    final t = target.toUpperCase();
+    for (int i = 0; i < 30; i++) {
+      if ((status?.bandText ?? '').toUpperCase() == t) return;
+      await sendRaw(AtsCmd.bandNext, 'band');
+      await Future.delayed(const Duration(milliseconds: 550));
+    }
+  }
+
   Future<void> deletePreset(int idx) async {
-    if (isAts) return;
+    if (isAts) {
+      if (idx < 0 || idx >= presets.length) return;
+      final p = presets[idx];
+      final slot = idx + 1;
+      final frame =
+          '#${slot.toString().padLeft(2, '0')},${p.bandLabel},0,AM,\r';
+      await sendRaw(frame, 'mem delete');
+      await Future.delayed(const Duration(milliseconds: 400));
+      await loadPresets();
+      return;
+    }
     await sendBytes(Cmd.presetDelete(idx), 'X$idx');
   }
 
@@ -455,6 +504,24 @@ class BleController extends ChangeNotifier {
   }
 
   void _handleRxText(String text) {
+    // ATS Mini memory slot line: #NN,BAND,freq,mode[,name]
+    if (isAts && text.startsWith('#')) {
+      final f = text.substring(1).split(',');
+      if (f.length >= 4) {
+        final freq = int.tryParse(f[2].trim()) ?? 0;
+        if (freq > 0) {
+          presets.add(Preset(
+            name: f.length > 4 ? f.sublist(4).join(',').trim() : '',
+            freqHz: freq,
+            band: 0,
+            bandText: f[1].trim(),
+          ));
+          notifyListeners();
+        }
+      }
+      return;
+    }
+
     // Official ATS Mini monitor stream (15 CSV fields).
     if (RadioStatus.isAtsMonitor(text)) {
       final st = RadioStatus.parseAts(text);

@@ -65,7 +65,8 @@ class Cmd {
       [0x63, item & 0xFF, value & 0xFF];
 }
 
-class RadioStatus {  final int freqHz;
+class RadioStatus {
+  final int freqHz;
   final int mode;
   final int band;
   final int volume;
@@ -73,6 +74,9 @@ class RadioStatus {  final int freqHz;
   final int snr;
   final int battery;
   final int bleState;
+
+  /// Raw band name from the official ATS Mini firmware (null for GNBD).
+  final String? bandText;
 
   const RadioStatus({
     required this.freqHz,
@@ -83,6 +87,7 @@ class RadioStatus {  final int freqHz;
     required this.snr,
     required this.battery,
     required this.bleState,
+    this.bandText,
   });
 
   static const List<String> modeNames = ['FM', 'AM', 'LSB', 'USB'];
@@ -92,13 +97,14 @@ class RadioStatus {  final int freqHz;
   ];
 
   /// Display unit per band (VHF/ham = MHz, MW/LW/SW = kHz).
-  bool get useMhz => band == 0 || band >= 4;
+  bool get useMhz =>
+      bandText != null ? (freqHz >= 1000000) : (band == 0 || band >= 4);
 
   String get modeName =>
       (mode >= 0 && mode < modeNames.length) ? modeNames[mode] : '?';
 
   String get bandName =>
-      (band >= 0 && band < bandNames.length) ? bandNames[band] : '?';
+      bandText ?? ((band >= 0 && band < bandNames.length) ? bandNames[band] : '?');
 
   String get unitLabel => useMhz ? 'MHz' : 'kHz';
 
@@ -172,6 +178,7 @@ class RadioStatus {  final int freqHz;
       freqHz: hz.abs(),
       mode: mode,
       band: band,
+      bandText: p[4].trim(),
       volume: at(9),
       rssi: at(10),
       snr: at(11),

@@ -16,7 +16,7 @@ weather / EiBi schedule / time and forwards the result over BLE.
 - Automatic reconnect to the last used radio
 - Two firmware protocols, auto-detected:
   - **GNBD miniradio** (1-char commands + binary settings)
-  - **Official ATS Mini** (`esp32-si4732/ats-mini`, ad hoc key protocol + monitor CSV)
+  - **Official ATS Mini** (`esp32-si4732/ats-mini`, ad hoc key protocol + monitor CSV): status, tune, volume, mode, band, memory presets, step/BW/AGC/backlight
 
 ## Requirements
 
