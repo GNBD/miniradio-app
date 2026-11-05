@@ -78,6 +78,11 @@ class RadioStatus {
   /// Raw band name from the official ATS Mini firmware (null for GNBD).
   final String? bandText;
 
+  /// Official ATS Mini step / bandwidth descriptions and AGC index.
+  final String? stepText;
+  final String? bwText;
+  final int? agcIdx;
+
   const RadioStatus({
     required this.freqHz,
     required this.mode,
@@ -88,6 +93,9 @@ class RadioStatus {
     required this.battery,
     required this.bleState,
     this.bandText,
+    this.stepText,
+    this.bwText,
+    this.agcIdx,
   });
 
   static const List<String> modeNames = ['FM', 'AM', 'LSB', 'USB'];
@@ -179,6 +187,9 @@ class RadioStatus {
       mode: mode,
       band: band,
       bandText: p[4].trim(),
+      stepText: p[6].trim(),
+      bwText: p[7].trim(),
+      agcIdx: int.tryParse(p[8].trim()),
       volume: at(9),
       rssi: at(10),
       snr: at(11),

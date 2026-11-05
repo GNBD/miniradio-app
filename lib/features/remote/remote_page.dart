@@ -256,10 +256,7 @@ class RemotePage extends StatelessWidget {
                     const SizedBox(height: 18),
                     _signalRow(st),
                     const SizedBox(height: 16),
-                    if (ble.isAts)
-                      _atsBandRow(context, st?.bandName ?? '-', connected)
-                    else
-                      _bandRow(context, band, connected),
+                    _bandRow(context, band, connected),
                     const SizedBox(height: 12),
                     _tuningRow(context, connected, useMhz),
                   ],
@@ -341,39 +338,6 @@ class RemotePage extends StatelessWidget {
     );
   }
 
-  Widget _atsBandRow(BuildContext context, String bandName, bool connected) {
-    final p = Pal(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      decoration: BoxDecoration(
-        color: p.soft,
-        borderRadius: BorderRadius.circular(13),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: connected ? () => ble.bandStep(-1) : null,
-            child: Icon(Icons.chevron_left,
-                size: 22, color: connected ? p.blue : p.muted),
-          ),
-          Expanded(
-            child: Text(bandName,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: p.blue)),
-          ),
-          GestureDetector(
-            onTap: connected ? () => ble.bandStep(1) : null,
-            child: Icon(Icons.chevron_right,
-                size: 22, color: connected ? p.blue : p.muted),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _bandRow(BuildContext context, int band, bool connected) {
     return Container(
       padding: const EdgeInsets.all(4),
@@ -383,7 +347,14 @@ class RemotePage extends StatelessWidget {
       ),
       child: Row(
         children: _quickBands.map((e) {
-          final active = band == e.$1 || (e.$1 == 1 && band == 2);
+          final n = (ble.status?.bandName ?? '').toUpperCase();
+          final active = ble.isAts
+              ? (e.$1 == 0
+                  ? n == 'VHF'
+                  : e.$1 == 1
+                      ? n.startsWith('MW')
+                      : !(n == 'VHF' || n.startsWith('MW')))
+              : (band == e.$1 || (e.$1 == 1 && band == 2));
           return Expanded(
             child: GestureDetector(
               onTap: connected ? () => ble.setBand(e.$1) : null,

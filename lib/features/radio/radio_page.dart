@@ -227,18 +227,26 @@ class RadioPage extends StatelessWidget {
   /// Official ATS Mini firmware exposes key-based controls only.
   Widget _atsView(
       BuildContext context, Pal p, RadioStatus? st, bool connected) {
-    Widget stepper(
-            String label, VoidCallback? dec, VoidCallback? inc) =>
+    Widget stepper(String label, String? value, VoidCallback? dec,
+            VoidCallback? inc) =>
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
           child: Row(
             children: [
               Expanded(
-                child: Text(label,
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: p.ink)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label,
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: p.ink)),
+                    if (value != null && value.isNotEmpty)
+                      Text(value,
+                          style: TextStyle(fontSize: 10.5, color: p.muted)),
+                  ],
+                ),
               ),
               _round(Icons.remove, dec),
               const SizedBox(width: 8),
@@ -262,15 +270,17 @@ class RadioPage extends StatelessWidget {
                 style: TextStyle(fontSize: 11, color: p.muted),
               ),
               const SizedBox(height: 10),
-              stepper('Tuning step',
+              stepper('Tuning step', st?.stepText,
                   connected ? () => ble.stepCycle(-1) : null,
                   connected ? () => ble.stepCycle(1) : null),
-              stepper('Bandwidth', connected ? () => ble.bwCycle(-1) : null,
+              stepper('Bandwidth', st?.bwText,
+                  connected ? () => ble.bwCycle(-1) : null,
                   connected ? () => ble.bwCycle(1) : null),
               stepper('AGC / Attenuator',
+                  st?.agcIdx == null ? null : '${st!.agcIdx}',
                   connected ? () => ble.agcCycle(-1) : null,
                   connected ? () => ble.agcCycle(1) : null),
-              stepper('Backlight',
+              stepper('Backlight', null,
                   connected ? () => ble.backlightCycle(-1) : null,
                   connected ? () => ble.backlightCycle(1) : null),
             ],

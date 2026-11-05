@@ -68,6 +68,24 @@ class BleController extends ChangeNotifier {
   /// Write mode negotiated during detection (ATS uses write-without-response).
   bool _writeWithoutResponse = false;
 
+  Timer? _watchdog;
+
+  void _startWatchdog() {
+    _watchdog?.cancel();
+    _watchdog = Timer.periodic(const Duration(seconds: 4), (_) async {
+      if (!isAts || state != LinkState.connected) return;
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      if (nowMs - _lastStatusMs > 4000) {
+        // Monitor stream stopped; the toggle may have been off. Re-arm it.
+        await sendRaw(AtsCmd.monitorToggle, 'monitor rearm');
+      }
+    });
+  }
+
+  void _stopWatchdog() {    _watchdog?.cancel();
+    _watchdog = null;
+  }
+
   void _set(LinkState s) {
     state = s;
     notifyListeners();
@@ -184,6 +202,9 @@ class BleController extends ChangeNotifier {
         await send(Cmd.presetList);
         await send(Cmd.getSettings);
         await setBridgeEnabled(bridgeEnabled);
+      } else if (isAts) {
+        await loadPresets();
+        _startWatchdog();
       }
     } catch (e) {
       error = '$e';
@@ -193,6 +214,7 @@ class BleController extends ChangeNotifier {
   }
 
   Future<void> disconnect() async {
+    _stopWatchdog();
     final id = deviceId;
     if (id != null) {
       try {
@@ -272,7 +294,11 @@ class BleController extends ChangeNotifier {
   }
 
   Future<void> setBand(int idx) async {
-    if (isAts) return; // band cycling differs; use bandStep()
+    if (isAts) {
+      const map = {0: 'VHF', 1: 'MW1', 2: 'MW1', 3: 'ALL'};
+      await _atsSelectBand(map[idx] ?? 'VHF');
+      return;
+    }
     await sendBytes(Cmd.setBand(idx), 'B$idx');
   }
 
@@ -683,6 +709,10 @@ class BleController extends ChangeNotifier {
           old.freqHz != st.freqHz ||
           old.mode != st.mode ||
           old.band != st.band ||
+          old.bandText != st.bandText ||
+          old.stepText != st.stepText ||
+          old.bwText != st.bwText ||
+          old.agcIdx != st.agcIdx ||
           old.volume != st.volume ||
           old.battery != st.battery;
       status = st;
@@ -711,6 +741,7 @@ class BleController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _stopWatchdog();
     UniversalBle.onScanResult = null;
     UniversalBle.onValueChange = null;
     UniversalBle.onConnectionChange = null;
