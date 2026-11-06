@@ -79,3 +79,5 @@ command/telemetry reference (GNBD, bridge, ATS Mini).
 MIT. See `LICENSE` and `THIRD_PARTY_NOTICES.md`.
 
 The firmware is a separate project (MIT, with ESP-IDF/NimBLE under Apache-2.0).
+
+Please let us know if any licenses are missing or incorrect.
